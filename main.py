@@ -9,14 +9,19 @@ def show_samples(label, count=5):
         plt.title(f"Label {label} - Sample {i}")
         plt.show()
 
-df = pd.read_csv("data/sign_mnist_alpha_digits_test.csv")
+df = pd.read_csv("data/sign_mnist_alpha_digits_train.csv")
 label_counts = Counter(df["label"])
 for label in sorted(label_counts):
     print(f"Label {label}: {label_counts[label]} samples")
 
 # Example: check why 0 and 1 might be messed up
-show_samples(26)  # Digit 9
-show_samples(27)  # Digit 0
+show_samples(29)  # Digit 0
+show_samples(30)  # Digit 0
+show_samples(31)  # Digit 0
+show_samples(32)  # Digit 0
+show_samples(33)  # Digit 0
+show_samples(34)  # Digit 0
+show_samples(35)  # Digit 0
 
 
 

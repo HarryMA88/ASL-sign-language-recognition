@@ -1,22 +1,39 @@
-from models.lebron2_3.lebron import Lebron23
 import torch
 import pandas as pd
+from torchvision import transforms
+from config import DEVICE, NUM_CLASSES, SAVE_PATH
+from models import get_model
 
-# Load model
-model = Lebron23(num_classes=36)
-model.load_state_dict(torch.load("saved_models/lebron2_3_best.pt"))
+# === CONFIG ===
+MODEL_NAME = "resnet"  # or "alexnet"
+MODEL_PATH = f"{SAVE_PATH}/{MODEL_NAME}_best.pt"
+CSV_PATH = "data/sign_mnist_alpha_digits_test.csv"
+
+# === MODEL SETUP ===
+model = get_model(MODEL_NAME, NUM_CLASSES)
+model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
+model.to(DEVICE)
 model.eval()
 
-# Load test data
-df = pd.read_csv("data/sign_mnist_alpha_digits_test.csv")
+# === TRANSFORM ===
+transform = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.Resize((224, 224)),
+    transforms.Lambda(lambda x: x.convert("RGB")),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.5]*3, std=[0.5]*3),
+])
 
+# === LOAD DATA ===
+df = pd.read_csv(CSV_PATH)
 correct = 0
 total = len(df)
 
 for i in range(total):
-    label = df.iloc[i, 0]
-    pixels = df.iloc[i, 1:].values.astype("float32") / 255.0
-    x = torch.tensor(pixels).view(1, 1, 28, 28)
+    label = int(df.iloc[i, 0])
+    pixels = df.iloc[i, 1:].values.astype("uint8").reshape(28, 28)
+    image = transform(pixels)
+    x = image.unsqueeze(0).to(DEVICE)  # [1, 3, 224, 224]
 
     with torch.no_grad():
         pred = model(x).argmax(dim=1).item()
@@ -26,4 +43,4 @@ for i in range(total):
     else:
         print(f"Mismatch at sample {i}: Predicted = {pred}, Actual = {label}")
 
-print(f"\n Final Test Accuracy: {correct / total:.4f} ({correct}/{total})")
+print(f"\nFinal Test Accuracy: {correct / total:.4f} ({correct}/{total})")
