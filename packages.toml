@@ -1,0 +1,14 @@
+[project]
+name = "vocal"
+version = "0.1.0"
+dependencies = [
+    "torch>=2.0",
+    "torchvision",
+    "pandas",
+    "matplotlib",
+    "tqdm"
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
