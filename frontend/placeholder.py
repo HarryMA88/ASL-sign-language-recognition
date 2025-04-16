@@ -734,15 +734,38 @@ class PredictionTab(QWidget):
         pixmap = QPixmap.fromImage(qimg).scaled(320, 240, Qt.KeepAspectRatio)
         self.webcam_label.setPixmap(pixmap)
     
+    def resize_with_padding(self, image, target_size=(28, 28), pad_color=0):
+        old_h, old_w = image.shape[:2]
+        target_w, target_h = target_size
+
+        scale = min(target_w / old_w, target_h / old_h)
+        new_w, new_h = int(old_w * scale), int(old_h * scale)
+
+        resized_image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+        top = (target_h - new_h) // 2
+        bottom = target_h - new_h - top
+        left = (target_w - new_w) // 2
+        right = target_w - new_w - left
+
+        padded_image = cv2.copyMakeBorder(resized_image, top, bottom, left, right,
+                                          cv2.BORDER_CONSTANT, value=pad_color)
+        return padded_image
+    
     def take_screenshot(self):
         if self.current_frame is None:
             QMessageBox.warning(self, "Warning", "No webcam frame to capture.")
             return
+        
+        gray = cv2.cvtColor(self.current_frame, cv2.COLOR_BGR2GRAY)
+
+        resized_gray = self.resize_with_padding(gray, target_size=(28, 28), pad_color=0)
+
         screenshot_dir = "screenshots"
         os.makedirs(screenshot_dir, exist_ok=True)
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         filename = os.path.join(screenshot_dir, f"screenshot_{timestamp}.png")
-        cv2.imwrite(filename, self.current_frame)
+        cv2.imwrite(filename, resized_gray)
         QMessageBox.information(self, "Screenshot", f"Screenshot saved as {filename}")
         item = QListWidgetItem(filename)
         self.list_images.addItem(item)
