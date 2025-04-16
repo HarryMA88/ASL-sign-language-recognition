@@ -19,10 +19,8 @@ class ToTensorNormalize:
         return transforms.Normalize((TRAIN_CONFIG["normalize_mean"],), (TRAIN_CONFIG["normalize_std"],))(image)
 
 def prepare_data_loaders():
-    transform = ToTensorNormalize()
-
-    full_train_set = ASLDataset("data/sign_mnist_alpha_digits_train.csv", transform=transform)
-    test_set = ASLDataset("data/sign_mnist_alpha_digits_test.csv", transform=transform)
+    full_train_set = ASLDataset("data/sign_mnist_alpha_digits_train.csv", transform=get_train_transforms)
+    test_set = ASLDataset("data/sign_mnist_alpha_digits_test.csv", transform=get_test_transforms)
 
     val_size = int(0.2 * len(full_train_set))
     train_size = len(full_train_set) - val_size
