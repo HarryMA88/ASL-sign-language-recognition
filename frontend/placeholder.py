@@ -44,90 +44,7 @@ class SignLanguageDataset(Dataset):
         image = torch.tensor(self.images[idx], dtype=torch.float32).unsqueeze(0)
         label = int(self.labels[idx])
         return image, label
-
-# Define three different CNN architectures
-
-class CustomCNN(nn.Module):
-    """
-    A custom-designed CNN.
-    Assumes input images are grayscale and that the image dimensions are provided.
-    """
-    def __init__(self, input_shape, num_classes):
-        super(CustomCNN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.dropout1 = nn.Dropout(0.25)
-        # Compute flatten dimension dynamically using a dummy forward pass.
-        dummy_input = torch.zeros(1, 1, input_shape[0], input_shape[1])
-        x = self.pool(nn.functional.relu(self.conv2(nn.functional.relu(self.conv1(dummy_input)))))
-        self.flatten_dim = x.numel()
-        self.fc1 = nn.Linear(self.flatten_dim, 128)
-        self.dropout2 = nn.Dropout(0.5)
-        self.fc2 = nn.Linear(128, num_classes)
-    def forward(self, x):
-        x = nn.functional.relu(self.conv1(x))
-        x = nn.functional.relu(self.conv2(x))
-        x = self.pool(x)
-        x = self.dropout1(x)
-        x = x.view(x.size(0), -1)
-        x = nn.functional.relu(self.fc1(x))
-        x = self.dropout2(x)
-        x = self.fc2(x)
-        return x
-
-class StandardCNN1(nn.Module):
-    """
-    A standard CNN architecture (variation 1).
-    """
-    def __init__(self, input_shape, num_classes):
-        super(StandardCNN1, self).__init__()
-        self.conv1 = nn.Conv2d(1, 16, kernel_size=5)
-        self.pool = nn.MaxPool2d(2,2)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=5)
-        dummy_input = torch.zeros(1, 1, input_shape[0], input_shape[1])
-        x = self.pool(nn.functional.relu(self.conv1(dummy_input)))
-        x = self.pool(nn.functional.relu(self.conv2(x)))
-        self.flatten_dim = x.numel()
-        self.fc1 = nn.Linear(self.flatten_dim, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, num_classes)
-    def forward(self, x):
-        x = self.pool(nn.functional.relu(self.conv1(x)))
-        x = self.pool(nn.functional.relu(self.conv2(x)))
-        x = x.view(-1, self.flatten_dim)
-        x = nn.functional.relu(self.fc1(x))
-        x = nn.functional.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-
-class StandardCNN2(nn.Module):
-    """
-    A standard CNN architecture (variation 2).
-    """
-    def __init__(self, input_shape, num_classes):
-        super(StandardCNN2, self).__init__()
-        self.conv1 = nn.Conv2d(1, 64, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
-        self.pool = nn.MaxPool2d(2,2)
-        dummy_input = torch.zeros(1, 1, input_shape[0], input_shape[1])
-        x = self.pool(nn.functional.relu(self.conv2(nn.functional.relu(self.conv1(dummy_input)))))
-        self.flatten_dim = x.numel()
-        self.fc1 = nn.Linear(self.flatten_dim, 256)
-        self.fc2 = nn.Linear(256, num_classes)
-    def forward(self, x):
-        x = nn.functional.relu(self.conv1(x))
-        x = nn.functional.relu(self.conv2(x))
-        x = self.pool(x)
-        x = x.view(-1, self.flatten_dim)
-        x = nn.functional.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
-
-##############################################
-# QThread Subclasses for Background Process  #
-##############################################
-
+      
 class ImportThread(QThread):
     """
     A thread to import the dataset from a CSV file.
@@ -221,9 +138,9 @@ class TrainingThread(QThread):
             num_classes = 36  # 26 letters (excluding J and Z) + 10 digits
 
             # Build the model based on the selected architecture using the new names:
-            if self.model_choice == "Alexnet":
+            if self.model_choice == "Lebron":
                 model = CustomCNN(input_shape, num_classes)
-            elif self.model_choice == "Lebron":
+            elif self.model_choice == "Alexnet":
                 model = StandardCNN1(input_shape, num_classes)
             elif self.model_choice == "Resnet":
                 model = StandardCNN2(input_shape, num_classes)
