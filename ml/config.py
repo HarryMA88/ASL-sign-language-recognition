@@ -1,5 +1,5 @@
 TRAIN_CONFIG = {
-    "batch_size": 256,
+    "batch_size": 64,
     "epochs": 30,
     "learning_rate": 0.01,
     "weight_decay": 1e-4,
@@ -7,6 +7,7 @@ TRAIN_CONFIG = {
     "device": "cuda",
     "num_classes": 36,
     "image_size": 28,
+    "resize": 224,
     "normalize_mean": 0.5,
     "normalize_std": 0.5,
 }
