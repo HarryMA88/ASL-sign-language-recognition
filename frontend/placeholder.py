@@ -220,12 +220,12 @@ class TrainingThread(QThread):
             input_shape = sample_img.shape[1:]  # (H, W)
             num_classes = 36  # 26 letters (excluding J and Z) + 10 digits
 
-            # Build the model based on the selected architecture
-            if self.model_choice == "Custom CNN":
+            # Build the model based on the selected architecture using the new names:
+            if self.model_choice == "Alexnet":
                 model = CustomCNN(input_shape, num_classes)
-            elif self.model_choice == "Standard CNN 1":
+            elif self.model_choice == "Lebron":
                 model = StandardCNN1(input_shape, num_classes)
-            elif self.model_choice == "Standard CNN 2":
+            elif self.model_choice == "Resnet":
                 model = StandardCNN2(input_shape, num_classes)
             else:
                 self.error_signal.emit("Unknown model selected.")
@@ -339,15 +339,23 @@ class DatasetImportTab(QWidget):
     The Dataset Import tab allows the user to select a CSV file.
     A progress bar shows the import progress and an ETA, and the user can stop the process.
     Once finished, the tab emits the loaded images, labels, and image shape.
+    Also provides a button to remove the imported dataset.
     """
     dataset_loaded = pyqtSignal(np.ndarray, np.ndarray, tuple)
+    dataset_cleared = pyqtSignal()  # signal emitted when dataset is removed
 
     def __init__(self):
         super(DatasetImportTab, self).__init__()
         self.layout = QVBoxLayout(self)
+        # Import Dataset Button
         self.btn_import = QPushButton("Import Dataset CSV")
         self.btn_import.clicked.connect(self.import_dataset)
         self.layout.addWidget(self.btn_import)
+        # Remove Dataset Button
+        self.btn_remove = QPushButton("Remove Imported Dataset")
+        self.btn_remove.clicked.connect(self.remove_dataset)
+        self.layout.addWidget(self.btn_remove)
+        # Progress indicators
         self.progress_bar = QProgressBar()
         self.layout.addWidget(self.progress_bar)
         self.lbl_eta = QLabel("ETA: N/A")
@@ -388,42 +396,60 @@ class DatasetImportTab(QWidget):
             self.btn_stop.setEnabled(False)
             self.lbl_eta.setText("Import stopped")
 
+    def remove_dataset(self):
+        # Clear progress indicators and emit signal so other tabs can clear the dataset.
+        self.progress_bar.setValue(0)
+        self.lbl_eta.setText("No dataset loaded")
+        self.dataset_cleared.emit()
+
+from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QLabel, QAbstractItemView
+from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtGui import QPixmap
+
 class DatasetViewerTab(QWidget):
     """
-    The Dataset Viewer tab displays a scrollable list of images.
-    It offers a combo box for filtering by sign and shows simple statistics (image counts per sign).
+    The Dataset Viewer tab displays a responsive table of images (as thumbnails) with rows and columns.
+    The table automatically adjusts the number of columns based on the available width and allows vertical scrolling.
+    A combo box is provided for filtering by sign and a statistics label shows counts per sign.
     """
     def __init__(self):
         super(DatasetViewerTab, self).__init__()
         self.layout = QVBoxLayout(self)
+        # Filter combo box for selecting specific sign
         self.filter_combo = QComboBox()
         self.filter_combo.addItem("All")
-        self.filter_combo.currentIndexChanged.connect(self.update_view)
+        self.filter_combo.currentIndexChanged.connect(self.populate_table)
         self.layout.addWidget(self.filter_combo)
+        # Statistics label
         self.stats_label = QLabel("Dataset statistics will appear here.")
         self.layout.addWidget(self.stats_label)
-        self.scroll_area = QScrollArea()
-        self.scroll_widget = QWidget()
-        self.scroll_layout = QVBoxLayout(self.scroll_widget)
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setWidget(self.scroll_widget)
-        self.layout.addWidget(self.scroll_area)
+        # Table widget for image thumbnails
+        self.tableWidget = QTableWidget()
+        self.tableWidget.setSelectionMode(QAbstractItemView.NoSelection)
+        self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.layout.addWidget(self.tableWidget)
+        # Stored images and labels
         self.images = None
         self.labels = None
+        # Thumbnail size (can be adjusted)
+        self.thumb_size = QSize(100, 100)
 
     def load_dataset(self, images, labels):
         self.images = images
         self.labels = labels
-        unique_labels = sorted(list(set(labels)))
+        unique_labels = sorted(list(set(labels))) if labels is not None else []
+        self.filter_combo.blockSignals(True)
         self.filter_combo.clear()
         self.filter_combo.addItem("All")
         for label in unique_labels:
             self.filter_combo.addItem(str(label))
+        self.filter_combo.blockSignals(False)
         self.update_statistics()
-        self.update_view()
+        self.populate_table()
 
     def update_statistics(self):
-        if self.labels is None:
+        if self.labels is None or len(self.labels) == 0:
+            self.stats_label.setText("No dataset loaded.")
             return
         stats = {}
         for label in self.labels:
@@ -433,29 +459,61 @@ class DatasetViewerTab(QWidget):
             stats_text += f"{label}: {count} images\n"
         self.stats_label.setText(stats_text)
 
-    def update_view(self):
-        # Clear previous items
-        for i in reversed(range(self.scroll_layout.count())):
-            widget_to_remove = self.scroll_layout.itemAt(i).widget()
-            if widget_to_remove:
-                widget_to_remove.setParent(None)
+    def populate_table(self):
+        # Filter images based on combo box selection
         if self.images is None or self.labels is None:
+            self.tableWidget.clearContents()
+            self.tableWidget.setRowCount(0)
             return
+
         selected_filter = self.filter_combo.currentText()
-        count = 0
-        for img, label in zip(self.images, self.labels):
-            if selected_filter != "All" and str(label) != selected_filter:
-                continue
+        filtered_data = [(img, lbl) for img, lbl in zip(self.images, self.labels)
+                         if selected_filter == "All" or str(lbl) == selected_filter]
+
+        total = len(filtered_data)
+        if total == 0:
+            self.tableWidget.clearContents()
+            self.tableWidget.setRowCount(0)
+            return
+
+        # Determine how many columns to display based on the table width and the thumbnail size
+        available_width = self.tableWidget.viewport().width()
+        columns = max(1, available_width // (self.thumb_size.width() + 10))
+        rows = (total + columns - 1) // columns
+
+        self.tableWidget.setColumnCount(columns)
+        self.tableWidget.setRowCount(rows)
+        # Optional: Hide headers
+        self.tableWidget.horizontalHeader().setVisible(False)
+        self.tableWidget.verticalHeader().setVisible(False)
+        self.tableWidget.setShowGrid(False)
+
+        # Clear any previous items
+        self.tableWidget.clearContents()
+
+        for index, (img, lbl) in enumerate(filtered_data):
+            row = index // columns
+            col = index % columns
+            # Create a QLabel to show the thumbnail image
             height, width = img.shape
-            qimg = QImage((img * 255).astype(np.uint8).data, width, height, width, QImage.Format_Grayscale8)
-            pixmap = QPixmap.fromImage(qimg).scaled(100, 100, Qt.KeepAspectRatio)
-            lbl_img = QLabel()
-            lbl_img.setPixmap(pixmap)
-            lbl_img.setToolTip(str(label))
-            self.scroll_layout.addWidget(lbl_img)
-            count += 1
-            if count >= 50:
-                break
+            pixmap = QPixmap.fromImage(
+                QImage((img * 255).astype('uint8').data, width, height, width, QImage.Format_Grayscale8)
+            ).scaled(self.thumb_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            label_widget = QLabel()
+            label_widget.setPixmap(pixmap)
+            label_widget.setToolTip(str(lbl))
+            label_widget.setAlignment(Qt.AlignCenter)
+            self.tableWidget.setCellWidget(row, col, label_widget)
+
+        # Resize rows to fit content
+        for row in range(rows):
+            self.tableWidget.setRowHeight(row, self.thumb_size.height() + 10)
+
+    def resizeEvent(self, event):
+        """Recalculate the table columns when the widget is resized."""
+        super(DatasetViewerTab, self).resizeEvent(event)
+        self.populate_table()
+
 
 class TrainingTab(QWidget):
     """
@@ -480,11 +538,11 @@ class TrainingTab(QWidget):
         h_layout.addWidget(self.lbl_train_percent)
         self.slider_train.valueChanged.connect(lambda val: self.lbl_train_percent.setText(f"{val}%"))
         self.layout.addLayout(h_layout)
-        # Model selection
+        # Model selection (using new names)
         h_layout2 = QHBoxLayout()
         h_layout2.addWidget(QLabel("Select Model:"))
         self.model_combo = QComboBox()
-        self.model_combo.addItems(["Custom CNN", "Standard CNN 1", "Standard CNN 2"])
+        self.model_combo.addItems(["Alexnet", "Lebron", "Resnet"])
         h_layout2.addWidget(self.model_combo)
         self.layout.addLayout(h_layout2)
         # Hyperparameters: batch size and epochs
@@ -523,6 +581,10 @@ class TrainingTab(QWidget):
 
     def set_dataset(self, dataset):
         self.current_dataset = dataset
+
+    def clear_dataset(self):
+        self.current_dataset = None
+        QMessageBox.information(self, "Dataset Cleared", "The imported dataset has been removed.")
 
     def start_training(self):
         if self.current_dataset is None:
@@ -624,11 +686,12 @@ class PredictionTab(QWidget):
             model_choice = self.model_metadata["model_choice"]
             input_shape = self.model_metadata.get("input_shape", (28, 28))
             num_classes = 36
-            if model_choice == "Custom CNN":
+            # Map the new model names to the appropriate classes.
+            if model_choice == "Alexnet":
                 model = CustomCNN(input_shape, num_classes)
-            elif model_choice == "Standard CNN 1":
+            elif model_choice == "Lebron":
                 model = StandardCNN1(input_shape, num_classes)
-            elif model_choice == "Standard CNN 2":
+            elif model_choice == "Resnet":
                 model = StandardCNN2(input_shape, num_classes)
             else:
                 QMessageBox.warning(self, "Warning", "Unknown model architecture in metadata.")
@@ -730,6 +793,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.prediction_tab, "Prediction")
         # Connect the dataset import completion to update viewer and training tabs.
         self.import_tab.dataset_loaded.connect(self.on_dataset_loaded)
+        self.import_tab.dataset_cleared.connect(self.on_dataset_cleared)
 
     @pyqtSlot(np.ndarray, np.ndarray, tuple)
     def on_dataset_loaded(self, images, labels, img_shape):
@@ -738,6 +802,13 @@ class MainWindow(QMainWindow):
         self.training_tab.set_dataset(self.dataset)
         # Save the input shape in training metadata for model reconstruction.
         self.training_tab.input_shape = img_shape
+
+    @pyqtSlot()
+    def on_dataset_cleared(self):
+        # Clear the dataset in viewer and training tabs.
+        self.dataset = None
+        self.viewer_tab.load_dataset(np.array([]), np.array([]))
+        self.training_tab.clear_dataset()
 
 def main():
     app = QApplication(sys.argv)
