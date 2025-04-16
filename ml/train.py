@@ -9,6 +9,9 @@ import torch.amp
 from model import get_modified_resnet18
 from config import TRAIN_CONFIG
 from dataset import ASLDataset
+from models import model_registry
+
+
 
 class ToTensorNormalize:
     def __call__(self, image):
@@ -28,7 +31,7 @@ def prepare_data_loaders():
     return train_loader, val_loader, test_loader
 
 
-def run_training(model, train_loader, device):
+def run_training(model, train_loader, device, model_name):
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(
         model.parameters(),
@@ -36,7 +39,8 @@ def run_training(model, train_loader, device):
         weight_decay=TRAIN_CONFIG["weight_decay"],
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=TRAIN_CONFIG["epochs"])
-    scaler = torch.amp.GradScaler(device_type="cuda")
+    scaler = torch.amp.GradScaler(device=TRAIN_CONFIG["device"])
+
 
     for epoch in range(TRAIN_CONFIG["epochs"]):
         model.train()
@@ -62,15 +66,15 @@ def run_training(model, train_loader, device):
         train_acc = correct / total
         print(f"Epoch {epoch+1} | Train Acc: {train_acc:.4f} | Loss: {running_loss / total:.4f}")
 
-    torch.save(model.state_dict(), "best_model.pt")
+    torch.save(model.state_dict(), f"{model_name}_model.pt")
     print("Model saved as best_model.pt")
 
 
 
-def run_test(model, test_loader, device):
+def run_test(model, test_loader, device, model_name):
     import matplotlib.pyplot as plt
 
-    model.load_state_dict(torch.load("best_model.pt", map_location=device, weights_only=True))
+    model.load_state_dict(torch.load(f"{model_name}_model.pt", map_location=device, weights_only=True))
     model.eval()
 
     correct, total = 0, 0
@@ -104,17 +108,19 @@ def run_test(model, test_loader, device):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", type=str, default="train", choices=["train", "test"])
+    parser.add_argument("--model", type=str, default="resnet", choices=model_registry.keys())
     args = parser.parse_args()
 
     device = torch.device(TRAIN_CONFIG["device"])
-    model = get_modified_resnet18(TRAIN_CONFIG["num_classes"]).to(device)
+    model_fn = model_registry[args.model]
+    model = model_fn(num_classes=TRAIN_CONFIG["num_classes"]).to(device)
 
     train_loader, val_loader, test_loader = prepare_data_loaders()
 
     if args.mode == "train":
-        run_training(model, train_loader, device)
+        run_training(model, train_loader, device, args.model)
     elif args.mode == "test":
-        run_test(model, test_loader, device)
+        run_test(model, test_loader, device, args.model)
 
 if __name__ == "__main__":
     main()

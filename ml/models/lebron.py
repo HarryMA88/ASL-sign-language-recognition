@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from config import TRAIN_CONFIG
 
 class SEBlock(nn.Module):
     def __init__(self, channels, reduction=16):
@@ -50,7 +51,7 @@ class MiniInceptionBlock(nn.Module):
 
 
 class Lebron23(nn.Module):
-    def __init__(self, num_classes=36):
+    def __init__(self, num_classes=TRAIN_CONFIG["num_classes"]):
         super().__init__()
         self.stem = nn.Sequential(
         nn.Conv2d(1, 32, kernel_size=3, padding=1),
@@ -88,3 +89,6 @@ class Lebron23(nn.Module):
         x = self.block2(x)
         x = self.classifier(x)
         return x
+
+def get_model(num_classes=TRAIN_CONFIG["num_classes"]):
+    return Lebron23(num_classes=num_classes)
