@@ -10,6 +10,8 @@ from PyQt5.QtGui import QImage, QPixmap
 from ml.models import model_registry
 from backend.dataset import SignLanguageDataset
 from frontend.prediction_popup import PredictionPopup
+from frontend.webcam_popup import WebcamPopup
+
 
 
 class PredictionTab(QWidget):
@@ -29,6 +31,9 @@ class PredictionTab(QWidget):
         self.btn_model.clicked.connect(self.select_model)
         self.btn_data = QPushButton("Select Dataset")
         self.btn_data.clicked.connect(self.select_dataset)
+        self.btn_webcam = QPushButton("Open Webcam")
+        self.btn_webcam.clicked.connect(self.open_webcam)
+        self.control_bar.addWidget(self.btn_webcam)
 
         self.control_bar.addWidget(self.btn_model)
         self.control_bar.addWidget(self.btn_data)
@@ -37,6 +42,14 @@ class PredictionTab(QWidget):
         self.grid_area.setWidget(self.grid_widget)
         self.grid_area.setWidgetResizable(True)
         self.layout.addWidget(self.grid_area)
+
+    def open_webcam(self):
+        if not self.model:
+            QMessageBox.warning(self, "No Model", "Please load a model first.")
+            return
+        popup = WebcamPopup(self.model, self.device, parent=self)
+        popup.exec_()
+
 
     def select_model(self):
         path, _ = QFileDialog.getOpenFileName(self, "Select Model", "", "PyTorch Checkpoint (*.pt)")
