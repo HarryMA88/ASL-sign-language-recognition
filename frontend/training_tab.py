@@ -13,18 +13,18 @@ class TrainingTab(QWidget):
         super().__init__()
         self.layout = QVBoxLayout(self)
         # slider
-        h1=QHBoxLayout(); h1.addWidget(QLabel("Training %:"));
+        h1=QHBoxLayout(); h1.addWidget(QLabel("Training %:"))
         self.slider_train=QSlider(Qt.Horizontal); self.slider_train.setRange(50,100); self.slider_train.setValue(80)
-        h1.addWidget(self.slider_train);
+        h1.addWidget(self.slider_train)
         self.lbl_pct=QLabel("80%"); h1.addWidget(self.lbl_pct)
         self.slider_train.valueChanged.connect(lambda v:self.lbl_pct.setText(f"{v}%"))
         self.layout.addLayout(h1)
         # model
-        h2=QHBoxLayout(); h2.addWidget(QLabel("Model:"));
+        h2=QHBoxLayout(); h2.addWidget(QLabel("Model:"))
         self.model_combo=QComboBox(); self.model_combo.addItems(["Alexnet","Lebron","Resnet"]);
         h2.addWidget(self.model_combo); self.layout.addLayout(h2)
         # batch+epochs
-        h3=QHBoxLayout(); h3.addWidget(QLabel("Batch:"));
+        h3=QHBoxLayout(); h3.addWidget(QLabel("Batch:"))
         self.spin_batch=QSpinBox(); self.spin_batch.setRange(1,999); self.spin_batch.setValue(32)
         h3.addWidget(self.spin_batch); h3.addWidget(QLabel("Epochs:"))
         self.spin_epochs=QSpinBox(); self.spin_epochs.setRange(1,999); self.spin_epochs.setValue(30)
