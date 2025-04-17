@@ -2,14 +2,11 @@ import os
 import shutil
 import numpy as np
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QPushButton, QProgressBar,
-    QLabel, QFileDialog, QMessageBox
-)
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QProgressBar, QLabel, QFileDialog, QMessageBox
 from backend.import_thread import ImportThread
 
 class DatasetImportTab(QWidget):
-    dataset_loaded  = pyqtSignal(np.ndarray, np.ndarray, tuple)
+    dataset_loaded = pyqtSignal(np.ndarray, np.ndarray, tuple)
     dataset_cleared = pyqtSignal()
 
     def __init__(self):
@@ -17,12 +14,12 @@ class DatasetImportTab(QWidget):
         self.layout = QVBoxLayout(self)
 
         # Import button
-        self.btn_import = QPushButton("Import Dataset CSV")
+        self.btn_import = QPushButton("Add Dataset")
         self.btn_import.clicked.connect(self.import_dataset)
         self.layout.addWidget(self.btn_import)
 
         # Remove button
-        self.btn_remove = QPushButton("Remove Imported Dataset")
+        self.btn_remove = QPushButton("Remove Dataset")
         self.btn_remove.clicked.connect(self.remove_dataset)
         self.layout.addWidget(self.btn_remove)
 
@@ -35,37 +32,13 @@ class DatasetImportTab(QWidget):
         # Stop button
         self.btn_stop = QPushButton("Stop Import")
         self.btn_stop.clicked.connect(self.stop_import)
-        self.btn_stop.setEnabled(False)
         self.layout.addWidget(self.btn_stop)
 
-<<<<<<< Updated upstream
-        # Prepare data folder
-        # (assumes 'data' lives alongside frontend/)
-        self.data_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
-=======
         self.import_thread = None
         self.data_folder = "data"
->>>>>>> Stashed changes
         os.makedirs(self.data_folder, exist_ok=True)
+        self.update_buttons_state()
 
-<<<<<<< Updated upstream
-        # Initial button state: no CSV imported yet
-        self.btn_import.setEnabled(True)
-        self.btn_remove.setEnabled(False)
-
-        self.import_thread = None
-
-    def update_buttons_state(self):
-        csvs = [f for f in os.listdir(self.data_folder) if f.lower().endswith(".csv")]
-        self.btn_import.setEnabled(len(csvs) == 0)
-        self.btn_remove.setEnabled(len(csvs) > 0)
-
-    def import_dataset(self):
-        # Prevent multiple CSVs
-        csvs = [f for f in os.listdir(self.data_folder) if f.lower().endswith(".csv")]
-        if csvs:
-            QMessageBox.warning(self, "Warning", "Please remove the existing CSV before importing a new one.")
-=======
         # Auto-load existing CSV if present
         existing = [f for f in os.listdir(self.data_folder) if f.lower().endswith('.csv')]
         if existing:
@@ -88,28 +61,11 @@ class DatasetImportTab(QWidget):
         existing = [f for f in os.listdir(self.data_folder) if f.lower().endswith('.csv')]
         if existing:
             QMessageBox.warning(self, "Warning", "Remove existing dataset first.")
->>>>>>> Stashed changes
             return
-
-        path, _ = QFileDialog.getOpenFileName(self, "Select CSV File", "", "CSV Files (*.csv)")
+        path, _ = QFileDialog.getOpenFileName(self, "Select CSV", "", "CSV Files (*.csv)")
         if not path:
             return
-
         dest = os.path.join(self.data_folder, os.path.basename(path))
-<<<<<<< Updated upstream
-        try:
-            shutil.copy(path, dest)
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to copy file:\n{e}")
-            return
-
-        # Disable import, enable stop
-        self.update_buttons_state()
-        self.btn_stop.setEnabled(True)
-
-        # Start background import
-        self.import_thread = ImportThread(dest)
-=======
         shutil.copy(path, dest)
         self.btn_import.setEnabled(False)
         self.btn_remove.setEnabled(True)
@@ -120,27 +76,22 @@ class DatasetImportTab(QWidget):
         self.lbl_eta.setText("Loading dataset...")
         self.btn_stop.setEnabled(True)
         self.import_thread = ImportThread(path)
->>>>>>> Stashed changes
         self.import_thread.progress_signal.connect(self.update_progress)
         self.import_thread.finished_signal.connect(self.on_import_finished)
         self.import_thread.start()
+        self.update_buttons_state()
 
     @pyqtSlot(int, str)
-    def update_progress(self, value, eta):
-        self.progress_bar.setValue(value)
+    def update_progress(self, val, eta):
+        self.progress_bar.setValue(val)
         self.lbl_eta.setText(f"ETA: {eta}")
 
     @pyqtSlot(np.ndarray, np.ndarray, tuple)
     def on_import_finished(self, images, labels, shape):
-        # Stop button no longer needed once finished
         self.btn_stop.setEnabled(False)
         self.progress_bar.setValue(100)
         self.lbl_eta.setText("Import complete")
-
-        # Notify listeners
         self.dataset_loaded.emit(images, labels, shape)
-
-        # Update import/remove button states
         self.update_buttons_state()
 
     def stop_import(self):
@@ -148,17 +99,12 @@ class DatasetImportTab(QWidget):
             self.import_thread.stop()
             self.btn_stop.setEnabled(False)
             self.lbl_eta.setText("Import stopped")
+            self.update_buttons_state()
 
     def remove_dataset(self):
-        # Delete any CSV in data_folder
         for f in os.listdir(self.data_folder):
-            if f.lower().endswith(".csv"):
-                try:
-                    os.remove(os.path.join(self.data_folder, f))
-                except Exception as e:
-                    QMessageBox.warning(self, "Warning", f"Failed to remove {f}:\n{e}")
-
-        # Reset UI
+            if f.lower().endswith('.csv'):
+                os.remove(os.path.join(self.data_folder, f))
         self.progress_bar.setValue(0)
         self.lbl_eta.setText("No dataset loaded")
         self.dataset_cleared.emit()
