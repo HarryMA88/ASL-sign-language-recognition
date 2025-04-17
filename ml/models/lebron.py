@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from config import TRAIN_CONFIG
+from ml.config import TRAIN_CONFIG
 
 class SEBlock(nn.Module):
     def __init__(self, channels, reduction=16):

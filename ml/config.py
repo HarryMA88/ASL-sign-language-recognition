@@ -7,7 +7,6 @@ TRAIN_CONFIG = {
     "device": "cuda",
     "num_classes": 36,
     "image_size": 28,
-    "resize": 224,
     "normalize_mean": 0.5,
     "normalize_std": 0.5,
 }
