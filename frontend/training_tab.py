@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (
 )
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from backend.training_thread import TrainingThread
+from  ml.transforms import get_train_transforms
 
 class TrainingTab(QWidget):
     training_finished = pyqtSignal(object, dict)
@@ -79,6 +80,7 @@ class TrainingTab(QWidget):
         self.thread = None
 
     def set_dataset(self, d):
+        d.transform = get_train_transforms()
         self.dataset = d
 
     def clear_dataset(self):

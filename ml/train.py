@@ -6,7 +6,6 @@ from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
 from tqdm import tqdm
 import torch.amp
-import os
 from ml.transforms import get_test_transforms, get_train_transforms
 from ml.config import TRAIN_CONFIG
 from backend.dataset import SignLanguageDataset
@@ -20,9 +19,12 @@ class ToTensorNormalize:
         return transforms.Normalize((TRAIN_CONFIG["normalize_mean"],), (TRAIN_CONFIG["normalize_std"],))(image)
 
 def prepare_data_loaders():
-    full_train_set = SignLanguageDataset("data/sign_mnist_alpha_digits_train.csv", transform=get_train_transforms)
-    test_set = SignLanguageDataset("data/sign_mnist_alpha_digits_test.csv", transform=get_test_transforms)
+    full_train_set = SignLanguageDataset.from_csv("ml/data/sign_mnist_alpha_digits_train.csv", transform=get_train_transforms())
+    test_set = SignLanguageDataset.from_csv("ml/data/sign_mnist_alpha_digits_test.csv", transform=get_test_transforms())
+    print("[DEBUG] Using test transform:", test_set.transform)
 
+
+    #This part assumes 80/20 split but it can be variable
     val_size = int(0.2 * len(full_train_set))
     train_size = len(full_train_set) - val_size
     train_set, val_set = random_split(full_train_set, [train_size, val_size])
@@ -34,8 +36,8 @@ def prepare_data_loaders():
     return train_loader, val_loader, test_loader
 
 
-
-def run_training(model, train_loader, device, model_name):
+#This method should tkae
+def run_training(model, train_loader, val_loader, device, model_name):
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(
         model.parameters(),
@@ -67,7 +69,7 @@ def run_training(model, train_loader, device, model_name):
             images, labels = images.to(device), labels.to(device)
             optimizer.zero_grad()
 
-            with torch.amp.autocast(device="cuda"):
+            with torch.amp.autocast(device_type="cuda"):
                 outputs = model(images)
                 loss = criterion(outputs, labels)
 
@@ -87,7 +89,7 @@ def run_training(model, train_loader, device, model_name):
         model.eval()
         val_correct, val_total, val_loss = 0, 0, 0.0
         with torch.no_grad():
-            for images, labels in train_loader:
+            for images, labels in val_loader:
                 images, labels = images.to(device), labels.to(device)
                 outputs = model(images)
                 loss = criterion(outputs, labels)
@@ -104,15 +106,33 @@ def run_training(model, train_loader, device, model_name):
     print("Model saved as best_model.pt")
 
 
-def run_test(model, test_loader, device, model_path):
-    import matplotlib.pyplot as plt
 
-    checkpoint = torch.load(model_path, map_location=device)
-    model.load_state_dict(checkpoint["model_state"])
+
+def run_test(model, test_loader, device, model_name):
+    import matplotlib.pyplot as plt
+    path = f"saved_models/{model_name}_0418_0236.pt"
+    #path = f"{model_name}_model.pt"
+    print(f"\n[DEBUG] Loading model from: {path}")
+    model.load_state_dict(torch.load(path, map_location=device, weights_only=True))
+    model.to(device)
     model.eval()
 
     correct, total = 0, 0
     misclassified = []
+
+    # Print model structure and check output shape
+    with torch.no_grad():
+        dummy = torch.randn(1, 1, 28, 28).to(device)
+        out = model(dummy)
+        print("[DEBUG] Model output shape test (eval):", out.shape)
+
+    # Check one batch
+    x, y = next(iter(test_loader))
+    print("\n[DEBUG] Test loader sample:")
+    print(" - images.shape:", x.shape)
+    print(" - labels[:10]:", y[:10].tolist())
+    print(" - value range:", x.min().item(), "→", x.max().item())
+    print(" - mean:", x.mean().item())
 
     with torch.no_grad():
         for images, labels in test_loader:
@@ -127,32 +147,27 @@ def run_test(model, test_loader, device, model_path):
                 if preds[i] != labels[i]:
                     misclassified.append((images[i].cpu(), labels[i].item(), preds[i].item()))
 
-    print(f"Test Accuracy: {correct / total:.4f}")
+    accuracy = correct / total if total else 0.0
+    print(f"\n[DEBUG] Test Accuracy: {accuracy:.4f}")
 
-    print(f"\nMisclassified Samples (showing up to 50):")
-    for i, (img, true_label, pred_label) in enumerate(misclassified[:50]):
-        plt.imshow(img.squeeze(), cmap="gray")
-        plt.title(f"True: {true_label} | Pred: {pred_label}")
-        plt.axis("off")
-        plt.show()
+
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, required=True, choices=model_registry.keys())
-    parser.add_argument("--model_file", type=str, required=True, help="Path to the .pt file in saved_models/")
+    parser.add_argument("--mode", type=str, default="train", choices=["train", "test"])
+    parser.add_argument("--model", type=str, default="resnet", choices=model_registry.keys())
     args = parser.parse_args()
 
-    model_path = os.path.join("saved_models", args.model_file)
-    if not os.path.exists(model_path):
-        print(f"❌ Error: Model file not found at: {model_path}")
-        return
-
     device = torch.device(TRAIN_CONFIG["device"])
-    model_fn = model_registry[args.model_name]
+    model_fn = model_registry[args.model]
     model = model_fn(num_classes=TRAIN_CONFIG["num_classes"]).to(device)
 
-    test_loader = prepare_data_loaders()
-    run_test(model, test_loader, device, model_path)
+    train_loader, val_loader, test_loader = prepare_data_loaders()
+
+    if args.mode == "train":
+        run_training(model, train_loader, val_loader, device, args.model)
+    elif args.mode == "test":
+        run_test(model, test_loader, device, args.model)
 
 if __name__ == "__main__":
     main()
