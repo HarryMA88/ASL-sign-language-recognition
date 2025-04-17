@@ -7,17 +7,18 @@ class WebcamThread(QThread):
     frame_signal = pyqtSignal(np.ndarray)
 
     def __init__(self):
-        super().__init__()
+        super(WebcamThread, self).__init__()
         self._is_running = True
+        self.cap = None
 
     def run(self):
-        cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(0)
         while self._is_running:
-            ret, frame = cap.read()
+            ret, frame = self.cap.read()
             if ret:
                 self.frame_signal.emit(frame)
             time.sleep(0.03)
-        cap.release()
+        self.cap.release()
 
     def stop(self):
         self._is_running = False
