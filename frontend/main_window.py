@@ -2,10 +2,10 @@ import sys
 import numpy as np
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTabWidget
 from PyQt5.QtCore import pyqtSlot
-from .dataset_import_tab import DatasetImportTab
-from .dataset_viewer_tab import DatasetViewerTab
-from .training_tab import TrainingTab
-from .prediction_tab import PredictionTab
+from frontend.dataset_import_tab import DatasetImportTab
+from frontend.dataset_viewer_tab import DatasetViewerTab
+from frontend.training_tab import TrainingTab
+from frontend.prediction_tab import PredictionTab
 from backend.dataset import SignLanguageDataset
 
 class MainWindow(QMainWindow):
