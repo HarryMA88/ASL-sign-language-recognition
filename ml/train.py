@@ -6,10 +6,10 @@ from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
 from tqdm import tqdm
 import torch.amp
-from transforms import get_test_transforms, get_train_transforms
-from config import TRAIN_CONFIG
-from dataset import ASLDataset
-from models import model_registry
+from ml.transforms import get_test_transforms, get_train_transforms
+from ml.config import TRAIN_CONFIG
+from ml.dataset import ASLDataset
+from ml.models import model_registry
 
 
 

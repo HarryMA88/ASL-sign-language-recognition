@@ -1,5 +1,5 @@
 from torchvision import transforms
-from config import TRAIN_CONFIG
+from ml.config import TRAIN_CONFIG
 
 def get_train_transforms():
     return transforms.Compose([

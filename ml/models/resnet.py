@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torchvision.models as models
-from config import TRAIN_CONFIG
+from ml.config import TRAIN_CONFIG
 
 def get_model(num_classes=TRAIN_CONFIG["num_classes"]):
     model = models.resnet18(weights=None)
