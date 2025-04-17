@@ -92,7 +92,14 @@ def train_loop(model, train_loader, val_loader, epochs, emit_epoch=None, should_
     os.makedirs("saved_models", exist_ok=True)
     timestamp = time.strftime("%m%d_%H%M")
     save_path = os.path.join("saved_models", f"{model_name}_{timestamp}.pt")
-    torch.save(model.state_dict(), save_path)
+    torch.save({
+        "model_state": model.state_dict(),
+        "metadata": {
+            "model_choice": model_name.lower(),
+            "input_shape": (28, 28),
+            "num_classes": TRAIN_CONFIG["num_classes"]
+        }
+    }, save_path)
 
     metrics["elapsed"] = time.time() - start_time
     return metrics

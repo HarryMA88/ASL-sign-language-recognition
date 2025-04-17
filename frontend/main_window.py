@@ -22,7 +22,6 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.viewer_tab,"Viewer")
         self.tabs.addTab(self.training_tab,"Training")
         self.tabs.addTab(self.prediction_tab,"Prediction")
-        self.tabs.setTabEnabled(self.tabs.indexOf(self.prediction_tab),False)
         self.import_tab.dataset_loaded.connect(self.on_dataset_loaded)
         self.import_tab.dataset_cleared.connect(self.on_dataset_cleared)
         self.training_tab.training_finished.connect(self.on_training_finished)
