@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from config import TRAIN_CONFIG
+from ml.config import TRAIN_CONFIG
 
 class AlexNetModified(nn.Module):
     def __init__(self, num_classes: int):

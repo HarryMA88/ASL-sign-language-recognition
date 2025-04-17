@@ -6,10 +6,11 @@ from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
 from tqdm import tqdm
 import torch.amp
-from transforms import get_test_transforms, get_train_transforms
-from config import TRAIN_CONFIG
-from dataset import ASLDataset
-from models import model_registry
+import os
+from ml.transforms import get_test_transforms, get_train_transforms
+from ml.config import TRAIN_CONFIG
+from backend.dataset import SignLanguageDataset
+from ml.models import model_registry
 
 
 
@@ -19,10 +20,8 @@ class ToTensorNormalize:
         return transforms.Normalize((TRAIN_CONFIG["normalize_mean"],), (TRAIN_CONFIG["normalize_std"],))(image)
 
 def prepare_data_loaders():
-    transform = ToTensorNormalize()
-
-    full_train_set = ASLDataset("data/sign_mnist_alpha_digits_train.csv", transform=transform)
-    test_set = ASLDataset("data/sign_mnist_alpha_digits_test.csv", transform=transform)
+    full_train_set = SignLanguageDataset("data/sign_mnist_alpha_digits_train.csv", transform=get_train_transforms)
+    test_set = SignLanguageDataset("data/sign_mnist_alpha_digits_test.csv", transform=get_test_transforms)
 
     val_size = int(0.2 * len(full_train_set))
     train_size = len(full_train_set) - val_size
@@ -68,7 +67,7 @@ def run_training(model, train_loader, device, model_name):
             images, labels = images.to(device), labels.to(device)
             optimizer.zero_grad()
 
-            with torch.amp.autocast(device_type="cuda"):
+            with torch.amp.autocast(device="cuda"):
                 outputs = model(images)
                 loss = criterion(outputs, labels)
 
@@ -105,12 +104,11 @@ def run_training(model, train_loader, device, model_name):
     print("Model saved as best_model.pt")
 
 
-
-
-def run_test(model, test_loader, device, model_name):
+def run_test(model, test_loader, device, model_path):
     import matplotlib.pyplot as plt
 
-    model.load_state_dict(torch.load(f"{model_name}_model.pt", map_location=device, weights_only=True))
+    checkpoint = torch.load(model_path, map_location=device)
+    model.load_state_dict(checkpoint["model_state"])
     model.eval()
 
     correct, total = 0, 0
@@ -125,7 +123,6 @@ def run_test(model, test_loader, device, model_name):
             correct += (preds == labels).sum().item()
             total += labels.size(0)
 
-            # Track mismatches
             for i in range(len(labels)):
                 if preds[i] != labels[i]:
                     misclassified.append((images[i].cpu(), labels[i].item(), preds[i].item()))
@@ -139,23 +136,23 @@ def run_test(model, test_loader, device, model_name):
         plt.axis("off")
         plt.show()
 
-
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", type=str, default="train", choices=["train", "test"])
-    parser.add_argument("--model", type=str, default="resnet", choices=model_registry.keys())
+    parser.add_argument("--model_name", type=str, required=True, choices=model_registry.keys())
+    parser.add_argument("--model_file", type=str, required=True, help="Path to the .pt file in saved_models/")
     args = parser.parse_args()
 
+    model_path = os.path.join("saved_models", args.model_file)
+    if not os.path.exists(model_path):
+        print(f"❌ Error: Model file not found at: {model_path}")
+        return
+
     device = torch.device(TRAIN_CONFIG["device"])
-    model_fn = model_registry[args.model]
+    model_fn = model_registry[args.model_name]
     model = model_fn(num_classes=TRAIN_CONFIG["num_classes"]).to(device)
 
-    train_loader, val_loader, test_loader = prepare_data_loaders()
-
-    if args.mode == "train":
-        run_training(model, train_loader, device, args.model)
-    elif args.mode == "test":
-        run_test(model, test_loader, device, args.model)
+    test_loader = prepare_data_loaders()
+    run_test(model, test_loader, device, model_path)
 
 if __name__ == "__main__":
     main()
