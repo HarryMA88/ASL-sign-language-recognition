@@ -10,7 +10,7 @@ from backend.dataset import SignLanguageDataset
 
 class MainWindow(QMainWindow):
     def __init__(self):
-        super().__init__()
+        super(MainWindow, self).__init__()
         self.setWindowTitle("Sign Language Recognition Tool")
         self.resize(1000,800)
         self.tabs=QTabWidget(); self.setCentralWidget(self.tabs)
@@ -24,25 +24,25 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.prediction_tab,"Prediction")
         self.import_tab.dataset_loaded.connect(self.on_dataset_loaded)
         self.import_tab.dataset_cleared.connect(self.on_dataset_cleared)
-        self.training_tab.training_finished.connect(self.on_training_finished)
 
-    @pyqtSlot(np.ndarray,np.ndarray,tuple)
-    def on_dataset_loaded(self, imgs, lbls, shape):
-        self.dataset=SignLanguageDataset(imgs,lbls)
-        self.viewer_tab.load_dataset(imgs,lbls)
+    @pyqtSlot(np.ndarray, np.ndarray, tuple)
+    def on_dataset_loaded(self, images, labels, img_shape):
+        self.dataset = SignLanguageDataset(images, labels)
+        self.viewer_tab.load_dataset(images, labels)
         self.training_tab.set_dataset(self.dataset)
+        self.training_tab.input_shape = img_shape
+
     @pyqtSlot()
     def on_dataset_cleared(self):
-        self.dataset=None
-        self.viewer_tab.load_dataset(np.array([]),np.array([]))
+        self.dataset = None
+        self.viewer_tab.load_dataset(np.array([]), np.array([]))
         self.training_tab.clear_dataset()
-    @pyqtSlot(object,dict)
-    def on_training_finished(self,m,md):
-        self.prediction_tab.set_model(m,md)
-        self.tabs.setTabEnabled(self.tabs.indexOf(self.prediction_tab),True)
 
 def main():
-    app=QApplication(sys.argv)
-    w=MainWindow();w.show();sys.exit(app.exec_())
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec_())
 
-if __name__=="__main__": main()
+if __name__ == "__main__":
+    main()
