@@ -1,0 +1,116 @@
+/* style.qss */
+
+/* --------------- Global Widget Defaults --------------- */
+QWidget {
+    background-color: #2E2E2E;
+    color: #EEEEEE;
+    font-family: 'Magistral Light', Arial, sans-serif;
+}
+
+/* --------------- Main Window & Tabs --------------- */
+QMainWindow {
+    background-color: #2E2E2E;
+}
+
+QTabWidget::pane {
+    background-color: #2E2E2E;
+    border: none;
+}
+
+QTabBar::tab {
+    background-color: #333333;
+    color: #EEEEEE;
+    padding: 10px 40px;
+    min-width: 240px;
+    border: none;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    font-size: 14pt;
+}
+
+QTabBar::tab:selected {
+    background-color: #555555;
+}
+QTabBar::tab:hover {
+    background-color: #444444;
+}
+
+/* --------------- Buttons --------------- */
+QPushButton {
+    background-color: #444444;
+    color: #EEEEEE;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 16px;
+    font-weight: bold;
+}
+
+QPushButton:hover:!disabled {
+    background-color: #555555;
+}
+
+QPushButton:disabled {
+    background-color: #333333;
+    color: #777777;
+}
+
+/* --------------- Progress Bars --------------- */
+QProgressBar {
+    background-color: #444444;
+    border: none;
+    border-radius: 5px;
+    height: 12px;
+    text-align: center;
+    color: #EEEEEE;
+}
+
+QProgressBar::chunk {
+    background-color: orange;
+    border-radius: 5px;
+}
+
+/* --------------- Sliders --------------- */
+QSlider::groove:horizontal {
+    background: #444444;
+    height: 8px;
+    border-radius: 4px;
+}
+
+QSlider::handle:horizontal {
+    background: orange;
+    width: 16px;
+    margin: -4px 0;
+    border-radius: 8px;
+}
+
+/* --------------- ComboBoxes and LineEdits --------------- */
+QComboBox, QLineEdit {
+    background-color: #444444;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 4px;
+    padding: 4px;
+    font-size: 11pt;
+}
+
+QComboBox::drop-down {
+    border: none;
+}
+
+/* --------------- Table Widgets --------------- */
+QTableWidget {
+    background-color: #2E2E2E;
+    gridline-color: #444444;
+    color: #FFFFFF;
+}
+
+/* Stats table header styling */
+QHeaderView::section {
+    background-color: #333333;
+    color: #FFFFFF;
+    padding: 4px;
+    font-family: 'Magistral Light', Arial, sans-serif;
+    font-size: 11pt;
+    font-weight: bold;
+    font-style: italic;
+}
