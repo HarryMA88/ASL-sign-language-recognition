@@ -252,7 +252,7 @@ class TrainingTab(QWidget):
         self.btn_stop.setEnabled(False)
         QMessageBox.critical(self, "Error", msg)
 
-    def stop_training(self):
+      def stop_training(self):
         if self.thread:
             self.thread.stop()
             self.timer_widget.stop()

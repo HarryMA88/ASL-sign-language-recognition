@@ -19,8 +19,9 @@ from frontend.utils.label_map import label_map
 class WebcamPopup(QDialog):
     def __init__(self, model, device, parent=None):
         super().__init__(parent)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.setWindowTitle("Webcam Prediction")
-        self.resize(400, 550)
+        self.resize(500, 650)
 
         self.model = model
         self.model.eval()
@@ -159,8 +160,3 @@ class WebcamPopup(QDialog):
         self.ax.set_title("Output Probabilities")
         self.ax.set_xlabel("Class")
         self.ax.set_ylabel("Probability")
-        self.canvas.draw()
-
-
-
-
