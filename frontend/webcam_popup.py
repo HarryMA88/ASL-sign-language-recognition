@@ -1,6 +1,3 @@
-# frontend/webcam_popup.py
-
-import time
 import cv2
 import numpy as np
 import torch
@@ -44,22 +41,10 @@ class WebcamPopup(QDialog):
         self.result_label.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(self.result_label)
 
-        # ——— Matplotlib canvas with dark-grey bg ———
         self.fig, self.ax = plt.subplots(figsize=(4, 2))
-        # Figure background
-        self.fig.patch.set_facecolor('#2E2E2E')
-        # Axes background & text styling
-        self.ax.set_facecolor('#2E2E2E')
-        self.ax.tick_params(colors='white')
-        self.ax.xaxis.label.set_color('white')
-        self.ax.yaxis.label.set_color('white')
-        self.ax.title.set_color('white')
-
         self.canvas = FigureCanvas(self.fig)
-        self.canvas.setStyleSheet("background-color: #2E2E2E;")
         self.layout.addWidget(self.canvas)
 
-        # Start the webcam thread
         self.thread = WebcamThread()
         self.thread.frame_signal.connect(self.update_frame)
         self.thread.start()
@@ -170,15 +155,7 @@ class WebcamPopup(QDialog):
         # 🔟 Update UI
         self.result_label.setText(f"Prediction: {label}")
         self.ax.clear()
-        self.ax.set_facecolor('#2E2E2E')
-        self.ax.tick_params(colors='white')
-        self.ax.xaxis.label.set_color('white')
-        self.ax.yaxis.label.set_color('white')
-        self.ax.title.set_color('white')
-
-        # Plot orange bars
-        x = np.arange(len(probs))
-        self.ax.bar(x, probs, color='orange')
+        self.ax.bar(np.arange(len(probs)), probs)
         self.ax.set_title("Output Probabilities")
         self.ax.set_xlabel("Class")
         self.ax.set_ylabel("Probability")
