@@ -15,7 +15,7 @@ class MainWindow(QMainWindow):
 
         # Window setup
         self.setWindowTitle("Sign Language Recognition Tool")
-        self.resize(1000, 800)
+        self.resize(1280, 900)
 
         # Global dark theme & Magistral Light font
         self.setStyleSheet("""

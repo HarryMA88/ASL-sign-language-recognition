@@ -45,98 +45,118 @@ class TrainingTab(QWidget):
         QProgressBar::chunk { background: orange; border-radius:5px; }
         """)
 
-        # — Main vertical layout —
+        # — Main layout —
         main = QVBoxLayout(self)
         main.setContentsMargins(12, 12, 12, 12)
         main.setSpacing(20)
 
         # — Top row: parameters and timer/metrics —
         top = QHBoxLayout()
-        top.setSpacing(40)
+        top.setSpacing(20)
         main.addLayout(top)
 
         # --- LEFT: hyper-parameters ---
         left = QVBoxLayout()
         top.addLayout(left, stretch=3)
 
-        hdr = QLabel("Hyper‑parameters")
-        hdr.setObjectName("sectionHeader")
-        left.addWidget(hdr)
+        header = QLabel("Hyper‑parameters")
+        header.setObjectName("sectionHeader")
+        left.addWidget(header)
 
         grid = QGridLayout()
         grid.setHorizontalSpacing(20)
         grid.setVerticalSpacing(10)
+        grid.setColumnStretch(0, 3)
+        grid.setColumnStretch(1, 1)
+        grid.setColumnStretch(2, 1)
 
         lbl_split = QLabel("Training/Test Split")
         lbl_split.setObjectName("paramLabel")
-        grid.addWidget(lbl_split, 0, 0, 1, 2)
+        grid.addWidget(lbl_split, 0, 0, 1, 3)
+
+        # Move percentage label above the slider
+        self.lbl_split_pct = QLabel(f"{80}%")
+        self.lbl_split_pct.setObjectName("smallLabel")
+        grid.addWidget(self.lbl_split_pct, 1, 2, alignment=Qt.AlignRight)
+
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setRange(50, 100)
         self.slider.setValue(80)
-        grid.addWidget(self.slider, 1, 0)
-        self.lbl_split_pct = QLabel(f"{self.slider.value()}%")
-        self.lbl_split_pct.setObjectName("smallLabel")
-        grid.addWidget(self.lbl_split_pct, 1, 1, alignment=Qt.AlignLeft)
-        self.slider.valueChanged.connect(lambda v: self.lbl_split_pct.setText(f"{v}%"))
+        grid.addWidget(self.slider, 2, 0, 1, 3)
+        self.slider.valueChanged.connect(
+            lambda v: self.lbl_split_pct.setText(f"{v}%")
+        )
 
         params = ["Model", "Batch Size", "Epochs"]
         for i, txt in enumerate(params):
-            lbl = QLabel(txt); lbl.setObjectName("paramLabel")
-            grid.addWidget(lbl, 2, i)
+            lbl = QLabel(txt)
+            lbl.setObjectName("paramLabel")
+            grid.addWidget(lbl, 3, i)
 
         self.cb_model = QComboBox()
         self.cb_model.addItems(["Alexnet", "Lebron", "Resnet"])
-        grid.addWidget(self.cb_model, 3, 0)
-        self.in_batch = QLineEdit(); self.in_batch.setPlaceholderText("e.g. 32")
+        grid.addWidget(self.cb_model, 4, 0)
+
+        self.in_batch = QLineEdit()
+        self.in_batch.setPlaceholderText("e.g. 32")
         self.in_batch.setValidator(QIntValidator(1, 1024))
-        grid.addWidget(self.in_batch, 3, 1)
-        self.in_epochs = QLineEdit(); self.in_epochs.setPlaceholderText("e.g. 30")
+        grid.addWidget(self.in_batch, 4, 1)
+
+        self.in_epochs = QLineEdit()
+        self.in_epochs.setPlaceholderText("e.g. 30")
         self.in_epochs.setValidator(QIntValidator(1, 999))
-        grid.addWidget(self.in_epochs, 3, 2)
+        grid.addWidget(self.in_epochs, 4, 2)
 
         left.addLayout(grid)
 
-        btns = QHBoxLayout()
+        btn_layout = QHBoxLayout()
         self.btn_start = QPushButton("Start Training")
         self.btn_stop = QPushButton("Stop Training")
         self.btn_stop.setEnabled(False)
-        btns.addWidget(self.btn_start)
-        btns.addWidget(self.btn_stop)
-        left.addLayout(btns)
+        btn_layout.addWidget(self.btn_start)
+        btn_layout.addWidget(self.btn_stop)
+        left.addLayout(btn_layout)
 
         self.btn_start.clicked.connect(self.start_training)
         self.btn_stop.clicked.connect(self.stop_training)
 
-        # --- RIGHT: timer and metrics ---
+        # --- RIGHT: timer and metrics —
         right = QVBoxLayout()
+        right.setSpacing(4)
         top.addLayout(right, stretch=2)
 
         lbl_time = QLabel("Time Elapsed")
         lbl_time.setObjectName("smallLabel")
+        lbl_time.setContentsMargins(0, 10, 0, 0)
         right.addWidget(lbl_time, alignment=Qt.AlignCenter)
+
         self.timer_widget = TimerWidget()
         right.addWidget(self.timer_widget, alignment=Qt.AlignCenter)
 
-        right.addSpacing(10)
-
         metric_row = QHBoxLayout()
+        metric_row.setSpacing(10)
         right.addLayout(metric_row)
-        # Train loss
+
         col1 = QVBoxLayout()
-        l_lbl = QLabel("Train Loss"); l_lbl.setObjectName("smallLabel")
-        self.l_val = QLabel("0%"); self.l_val.setObjectName("valueLabel")
+        col1.setSpacing(4)
+        l_lbl = QLabel("Train Loss")
+        l_lbl.setObjectName("smallLabel")
+        self.l_val = QLabel("0%")
+        self.l_val.setObjectName("valueLabel")
         col1.addWidget(l_lbl, alignment=Qt.AlignCenter)
         col1.addWidget(self.l_val, alignment=Qt.AlignCenter)
         metric_row.addLayout(col1)
-        # Val accuracy
+
         col2 = QVBoxLayout()
-        a_lbl = QLabel("Val Accuracy"); a_lbl.setObjectName("smallLabel")
-        self.a_val = QLabel("0%"); self.a_val.setObjectName("valueLabel")
+        col2.setSpacing(4)
+        a_lbl = QLabel("Val Accuracy")
+        a_lbl.setObjectName("smallLabel")
+        self.a_val = QLabel("0%")
+        self.a_val.setObjectName("valueLabel")
         col2.addWidget(a_lbl, alignment=Qt.AlignCenter)
         col2.addWidget(self.a_val, alignment=Qt.AlignCenter)
         metric_row.addLayout(col2)
 
-        # — Graph area —
         fig, axes = plt.subplots(1, 2, figsize=(8, 4))
         fig.patch.set_facecolor('#2E2E2E')
         self.canvas = FigureCanvas(fig)
@@ -154,7 +174,6 @@ class TrainingTab(QWidget):
         self.lbl_epoch.setObjectName("smallLabel")
         main.addWidget(self.lbl_epoch, alignment=Qt.AlignLeft)
 
-        # Internal state
         self.losses = []
         self.accs = []
         self.thread = None
@@ -165,11 +184,14 @@ class TrainingTab(QWidget):
 
     def clear_dataset(self):
         self.dataset = None
-        self.in_batch.clear(); self.in_epochs.clear()
+        self.in_batch.clear()
+        self.in_epochs.clear()
         self.lbl_epoch.setText("Epoch 0/0")
-        self.timer_widget.setText("00 : 00")
-        self.l_val.setText("0%"); self.a_val.setText("0%")
-        self.losses.clear(); self.accs.clear()
+        self.timer_widget.setText("00:00")
+        self.l_val.setText("0%")
+        self.a_val.setText("0%")
+        self.losses.clear()
+        self.accs.clear()
         self.canvas.draw()
 
     def start_training(self):
@@ -177,13 +199,17 @@ class TrainingTab(QWidget):
             QMessageBox.warning(self, "Warning", "No dataset.")
             return
         try:
-            bs = int(self.in_batch.text()); ne = int(self.in_epochs.text())
+            bs = int(self.in_batch.text())
+            ne = int(self.in_epochs.text())
         except:
             QMessageBox.warning(self, "Warning", "Enter valid batch & epochs.")
             return
-        self.losses.clear(); self.accs.clear()
+        self.losses.clear()
+        self.accs.clear()
         self.lbl_epoch.setText(f"Epoch 0/{ne}")
-        self.btn_start.setEnabled(False); self.btn_stop.setEnabled(True)
+        self.btn_start.setEnabled(False)
+        self.btn_stop.setEnabled(True)
+
         tp = self.slider.value() / 100
         mc = self.cb_model.currentText()
 
@@ -203,14 +229,18 @@ class TrainingTab(QWidget):
         self.a_val.setText(f"{acc*100:.1f}%")
         total = self.thread.num_epochs
         self.lbl_epoch.setText(f"Epoch {e}/{total}")
-        self.losses.append(loss); self.accs.append(acc)
-        self.ax_loss.clear(); self.ax_loss.plot(range(1, e+1), self.losses, color='orange')
-        self.ax_acc.clear(); self.ax_acc.plot(range(1, e+1), self.accs, color='orange')
+        self.losses.append(loss)
+        self.accs.append(acc)
+        self.ax_loss.clear()
+        self.ax_loss.plot(range(1, e+1), self.losses, color='orange')
+        self.ax_acc.clear()
+        self.ax_acc.plot(range(1, e+1), self.accs, color='orange')
         self.canvas.draw()
 
     @pyqtSlot(dict)
     def _on_done(self, meta):
-        self.btn_start.setEnabled(True); self.btn_stop.setEnabled(False)
+        self.btn_start.setEnabled(True)
+        self.btn_stop.setEnabled(False)
         self.timer_widget.stop()
         QMessageBox.information(self, "Done", "Training complete.")
         self.training_finished.emit(self.thread.model, self.thread.metadata)
@@ -218,18 +248,13 @@ class TrainingTab(QWidget):
     @pyqtSlot(str)
     def _on_error(self, msg):
         self.timer_widget.stop()
-        self.btn_start.setEnabled(True); self.btn_stop.setEnabled(False)
+        self.btn_start.setEnabled(True)
+        self.btn_stop.setEnabled(False)
         QMessageBox.critical(self, "Error", msg)
 
-    def stop_training(self):
+      def stop_training(self):
         if self.thread:
-            try:
-                self.thread.error_signal.disconnect(self._on_error)
-            except (TypeError, RuntimeError):
-                pass
-        self.thread.stop()
-        self.btn_start.setEnabled(True)
-        self.thread = None
-        self.timer_widget.stop()
-        self.btn_stop.setEnabled(False)
-        QMessageBox.information(self, "Stopped", "Training halted.")
+            self.thread.stop()
+            self.timer_widget.stop()
+            self.btn_stop.setEnabled(False)
+            QMessageBox.information(self, "Stopped", "Training halted.")
