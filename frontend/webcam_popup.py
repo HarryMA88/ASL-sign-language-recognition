@@ -159,8 +159,3 @@ class WebcamPopup(QDialog):
         self.ax.set_title("Output Probabilities")
         self.ax.set_xlabel("Class")
         self.ax.set_ylabel("Probability")
-        self.canvas.draw()
-
-
-
-
