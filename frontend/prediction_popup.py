@@ -14,7 +14,7 @@ class PredictionPopup(QDialog):
         super().__init__(parent)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.setWindowTitle("Prediction Result")
-        self.resize(400, 500)
+        self.resize(500, 600)
         self.model = model
         self.device = device
         self.img_array = img_array
