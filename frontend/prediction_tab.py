@@ -14,13 +14,13 @@ from frontend.webcam_popup import WebcamPopup
 class PredictionTab(QWidget):
     def __init__(self):
         super().__init__()
-        self.model    = None
-        self.dataset  = None
-        self.all_data = []
-        self.total    = 0
-        self.page_size= 0
-        self.max_idx  = 0
-        self.device   = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model     = None
+        self.dataset   = None
+        self.all_data  = []
+        self.total     = 0
+        self.page_size = 0
+        self.max_idx   = 0
+        self.device    = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.layout      = QVBoxLayout(self)
         self.control_bar = QHBoxLayout()
@@ -48,14 +48,12 @@ class PredictionTab(QWidget):
 
         self.grid_area.verticalScrollBar().valueChanged.connect(self._on_scroll)
 
-
     def open_webcam(self):
         if not self.model:
             QMessageBox.warning(self, "No Model", "Please load a model first.")
             return
         popup = WebcamPopup(self.model, self.device, parent=self)
         popup.exec_()
-
 
     def select_model(self):
         path, _ = QFileDialog.getOpenFileName(self, "Select Model", "", "PyTorch Checkpoint (*.pt)")
@@ -67,8 +65,8 @@ class PredictionTab(QWidget):
             meta  = ckpt.get("metadata", {})
             state = ckpt.get("model_state", ckpt)
 
-            choice = meta.get("model_choice", "").lower()
-            ModelClass = model_registry.get(choice)
+            choice      = meta.get("model_choice", "").lower()
+            ModelClass  = model_registry.get(choice)
             if ModelClass is None:
                 raise ValueError("Unrecognized model type.")
 
@@ -82,31 +80,36 @@ class PredictionTab(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Could not load model:\n{e}")
 
-
     def select_dataset(self):
         path, _ = QFileDialog.getOpenFileName(self, "Select Dataset CSV", "", "CSV Files (*.csv)")
         if not path:
             return
 
+        # clear out any existing thumbnails
         for i in reversed(range(self.grid_layout.count())):
             w = self.grid_layout.itemAt(i).widget()
             if w:
                 w.setParent(None)
 
+        # load new dataset in background
         self.loader = DatasetLoader(path)
         self.loader.datasetLoaded.connect(self._set_dataset)
         self.loader.finished.connect(self._on_load_finished)
         self.loader.start()
 
-
     def _set_dataset(self, ds):
         self.dataset = ds
 
-
     def _on_load_finished(self):
-        self.btn_data.setText("Dataset Loaded")
-        self.btn_data.setEnabled(False)
+        # repurpose the button into a “Clear Dataset” action
+        self.btn_data.setText("Clear Dataset")
+        try:
+            self.btn_data.clicked.disconnect()
+        except TypeError:
+            pass
+        self.btn_data.clicked.connect(self.clear_dataset)
 
+        # build thumbnails
         thumb_size = QSize(100, 100)
         self.all_data.clear()
         for img, lbl in self.dataset:
@@ -121,6 +124,27 @@ class PredictionTab(QWidget):
         self.max_idx   = 0
         self._add_next_page()
 
+    def clear_dataset(self):
+        # reset state
+        self.dataset   = None
+        self.all_data.clear()
+        self.total     = 0
+        self.page_size = 0
+        self.max_idx   = 0
+
+        # remove thumbnails
+        for i in reversed(range(self.grid_layout.count())):
+            w = self.grid_layout.itemAt(i).widget()
+            if w:
+                w.setParent(None)
+
+        # restore button to loading mode
+        self.btn_data.setText("Select Dataset")
+        try:
+            self.btn_data.clicked.disconnect()
+        except TypeError:
+            pass
+        self.btn_data.clicked.connect(self.select_dataset)
 
     def _add_next_page(self):
         base = self.max_idx
@@ -135,12 +159,10 @@ class PredictionTab(QWidget):
             self.grid_layout.addWidget(thumb, idx // 6, idx % 6)
         self.max_idx = end
 
-
     def _on_scroll(self, val):
         sb = self.grid_area.verticalScrollBar()
         if val >= sb.maximum() - 10 and self.max_idx < self.total:
             self._add_next_page()
-
 
     def _open_popup(self, index):
         if not self.model or not self.dataset:
@@ -148,6 +170,6 @@ class PredictionTab(QWidget):
             return
 
         img, _ = self.dataset[index]
-        arr = img.numpy().squeeze() if torch.is_tensor(img) else img
-        popup = PredictionPopup(self.model, self.device, arr, parent=self)
+        arr    = img.numpy().squeeze() if torch.is_tensor(img) else img
+        popup  = PredictionPopup(self.model, self.device, arr, parent=self)
         popup.exec_()

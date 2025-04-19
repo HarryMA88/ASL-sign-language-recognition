@@ -12,6 +12,7 @@ from frontend.utils.label_map import label_map
 class PredictionPopup(QDialog):
     def __init__(self, model, device, img_array, parent=None):
         super().__init__(parent)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.setWindowTitle("Prediction Result")
         self.resize(400, 500)
         self.model = model
