@@ -31,7 +31,7 @@ class DatasetImportTab(QWidget):
         QProgressBar::chunk { background: #555; }
         QLabel { color: #CCC; }
         """)
-        
+
         # Layouts
         layout = QVBoxLayout(self)
         btn_layout = QHBoxLayout()
@@ -53,6 +53,13 @@ class DatasetImportTab(QWidget):
         # Progress bar
         self.progress_bar = QProgressBar()
         layout.addWidget(self.progress_bar)
+
+        # Stop Loading button (hidden until import starts)
+        self.btn_stop_loading = QPushButton("Stop Loading")
+        self.btn_stop_loading.setMinimumSize(150, 30)
+        self.btn_stop_loading.clicked.connect(self.stop_loading)
+        self.btn_stop_loading.hide()
+        layout.addWidget(self.btn_stop_loading)
 
         # Status label
         self.lbl_status = QLabel("")
@@ -85,7 +92,7 @@ class DatasetImportTab(QWidget):
         self.data_folder = "data"
         os.makedirs(self.data_folder, exist_ok=True)
 
-        # If CSV exists, auto-upload first one; otherwise show placeholder
+        # Auto-load existing CSV if present
         existing = [f for f in os.listdir(self.data_folder) if f.lower().endswith('.csv')]
         if existing:
             csv_path = os.path.join(self.data_folder, existing[0])
@@ -112,12 +119,14 @@ class DatasetImportTab(QWidget):
         self.placeholder_icon.setVisible(False)
 
     def _start_import_thread(self, path):
+        # Reset UI for new import
         self.progress_bar.setValue(0)
         self.lbl_status.setText("Loading dataset...")
-        self.lbl_status.setStyleSheet("")
-        self.success_label.clear()
         self.success_label.setVisible(False)
+        # Show stop button
+        self.btn_stop_loading.show()
 
+        # Start thread
         self.import_thread = ImportThread(path)
         self.import_thread.progress_signal.connect(self.update_progress)
         self.import_thread.finished_signal.connect(self.on_import_finished)
@@ -130,10 +139,14 @@ class DatasetImportTab(QWidget):
 
     @pyqtSlot(np.ndarray, np.ndarray, tuple)
     def on_import_finished(self, images, labels, shape):
+        # Complete UI
         self.progress_bar.setValue(100)
         self.lbl_status.setText("UPLOAD COMPLETE")
         self.lbl_status.setStyleSheet("font-weight:bold; font-size:16pt;")
+        # Hide stop button
+        self.btn_stop_loading.hide()
 
+        # Show success image
         pix = QPixmap('uploadComplete.png')
         if not pix.isNull():
             pix = pix.scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation)
@@ -141,6 +154,12 @@ class DatasetImportTab(QWidget):
             self.success_label.setVisible(True)
 
         self.dataset_loaded.emit(images, labels, shape)
+
+    def stop_loading(self):
+        if self.import_thread:
+            self.import_thread.stop()         # stop the background import
+        self.lbl_status.setText("LOADING HALTED")
+        self.btn_stop_loading.hide()
 
     def remove_dataset(self):
         # Safely remove CSV files
@@ -156,6 +175,7 @@ class DatasetImportTab(QWidget):
         self.lbl_status.clear()
         self.success_label.clear()
         self.success_label.setVisible(False)
+        self.btn_stop_loading.hide()
         self.btn_import.setVisible(True)
         self.btn_remove.setVisible(False)
         self.placeholder_label.setVisible(True)
