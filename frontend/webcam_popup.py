@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import os
 import time
 
+from ml.config import TRAIN_CONFIG
 from ml.transforms import get_test_transforms
 from backend.webcam_thread import WebcamThread
 from frontend.utils.label_map import label_map
@@ -22,6 +23,7 @@ class WebcamPopup(QDialog):
         self.resize(400, 550)
 
         self.model = model
+        self.model.eval()
         self.device = device
         self.frame = None
         self.crop_coords = None
@@ -96,24 +98,61 @@ class WebcamPopup(QDialog):
             QMessageBox.warning(self, "Missing Data", "Webcam frame or crop box not ready.")
             return
 
-        # Crop and preprocess
+        # 1️⃣ Raw crop of the red box
         x1, y1, x2, y2 = self.crop_coords
         roi = self.frame[y1:y2, x1:x2]
-        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        resized_gray = self.resize_with_padding(gray, target_size=(28, 28), pad_color=0)
 
-        # Transform and batch
-        tensor = get_test_transforms()(resized_gray)
-        batch = tensor.unsqueeze(0).to(self.device)
+        # 2️⃣ Skin‑color mask (in HSV)
+        hsv   = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+        lower = np.array([0, 20, 70], dtype="uint8")
+        upper = np.array([20, 255, 255], dtype="uint8")
+        mask  = cv2.inRange(hsv, lower, upper)
+        # clean it up
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
+        mask = cv2.erode(mask, kernel, iterations=2)
+        mask = cv2.dilate(mask, kernel, iterations=2)
 
-        # Inference
+        # 3️⃣ Find largest contour & crop
+        cnts = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
+        if cnts:
+            c = max(cnts, key=cv2.contourArea)
+            hx, hy, hw, hh = cv2.boundingRect(c)
+            hand = roi[hy:hy+hh, hx:hx+hw]
+        else:
+            hand = roi
+
+        # 4️⃣ (Debug) save mask & hand crop so you can inspect them
+        cv2.imwrite("DEBUG_mask.png", mask)
+        cv2.imwrite("DEBUG_hand.png", hand)
+
+        # 5️⃣ Grayscale + CLAHE on the hand crop
+        gray = cv2.cvtColor(hand, cv2.COLOR_BGR2GRAY)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+        gray_eq = clahe.apply(gray)
+
+        # 6️⃣ Resize + pad with train‑mean background
+        mean_px = int(TRAIN_CONFIG["normalize_mean"] * 255)
+        resized = self.resize_with_padding(gray_eq, (28,28), pad_color=mean_px)
+
+        # 7️⃣ (Optional) inspect the final input
+        cv2.imwrite("DEBUG_resized.png", resized)
+
+        # 8️⃣ Transform & batch exactly as before
+        tensor = get_test_transforms()(resized)
+        batch  = tensor.unsqueeze(0).to(self.device)
+
+        # 9️⃣ Inference
         with torch.no_grad():
             out   = self.model(batch)
-            probs = torch.nn.functional.softmax(out, dim=1).squeeze().cpu().numpy()
-            idx   = int(out.argmax(1).item())
+            probs = torch.softmax(out, dim=1).cpu().numpy().squeeze()
+        top5 = np.argsort(probs)[::-1][:5]
+        print("DEBUG top‑5 (idx,prob):", [(int(i), float(probs[i])) for i in top5])
 
-        # Update UI
-        label = label_map.get(idx, str(idx))
+        idx    = int(out.argmax(1).item())
+        label  = label_map.get(idx, str(idx))
+        print(f"DEBUG argmax idx={idx} → {label}")
+
+        # 🔟 Update UI
         self.result_label.setText(f"Prediction: {label}")
         self.ax.clear()
         self.ax.bar(np.arange(len(probs)), probs)
@@ -121,6 +160,7 @@ class WebcamPopup(QDialog):
         self.ax.set_xlabel("Class")
         self.ax.set_ylabel("Probability")
         self.canvas.draw()
+
 
 
 
