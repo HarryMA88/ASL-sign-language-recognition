@@ -29,8 +29,8 @@ class DatasetLoader(QThread):
         for img, lbl in ds:
             # This converts the dataset into thumbnails
             img_np = img.numpy().squeeze() if isinstance(img, torch.Tensor) else img
-            qimg   = QImage((img_np * 255).astype(np.uint8), 28, 28, 28, QImage.Format_Grayscale8)
-            pix    = QPixmap.fromImage(qimg).scaled(64, 64, Qt.KeepAspectRatio)
+            qimg = QImage((img_np * 255).astype(np.uint8), 28, 28, 28, QImage.Format_Grayscale8)
+            pix = QPixmap.fromImage(qimg).scaled(64, 64, Qt.KeepAspectRatio)
             batch.append((pix, lbl))
 
             # This loads every 50 thumbnails at once
