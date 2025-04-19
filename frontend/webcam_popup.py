@@ -73,12 +73,8 @@ class WebcamPopup(QDialog):
         self.frame = frame.copy()
 
         h, w, _ = frame.shape
-<<<<<<< HEAD
-        box_size = 200
-=======
         box_size = 300
 
->>>>>>> main
         x_center = int(w * 0.65)
         y_center = h // 2
         x1 = x_center - box_size // 2
@@ -102,21 +98,6 @@ class WebcamPopup(QDialog):
         new_w, new_h = int(old_w * scale), int(old_h * scale)
         resized_image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
-<<<<<<< HEAD
-    def capture_and_predict(self):
-        if self.frame is None:
-            return
-
-        x1, y1, x2, y2 = getattr(self, "crop_coords", (None,)*4)
-        if None in (x1, y1, x2, y2):
-            QMessageBox.warning(self, "Missing Crop Box", "Crop box not initialized.")
-            return
-
-        roi = self.frame[y1:y2, x1:x2]
-        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        resized = cv2.resize(gray, (28, 28))
-        img_np = resized.astype(np.uint8)
-=======
         top = (target_h - new_h) // 2
         bottom = target_h - new_h - top
         left = (target_w - new_w) // 2
@@ -145,7 +126,6 @@ class WebcamPopup(QDialog):
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
         mask = cv2.erode(mask, kernel, iterations=2)
         mask = cv2.dilate(mask, kernel, iterations=2)
->>>>>>> main
 
         # 3️⃣ Find largest contour & crop
         cnts = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
@@ -189,11 +169,6 @@ class WebcamPopup(QDialog):
 
         # 🔟 Update UI
         self.result_label.setText(f"Prediction: {label}")
-<<<<<<< HEAD
-
-        # ——— redraw bar chart with orange bars and white text ———
-=======
->>>>>>> main
         self.ax.clear()
         self.ax.set_facecolor('#2E2E2E')
         self.ax.tick_params(colors='white')
@@ -207,11 +182,3 @@ class WebcamPopup(QDialog):
         self.ax.set_title("Output Probabilities")
         self.ax.set_xlabel("Class")
         self.ax.set_ylabel("Probability")
-
-<<<<<<< HEAD
-        self.canvas.draw()
-=======
-
-
-
->>>>>>> main
