@@ -130,7 +130,7 @@ class PredictionTab(QWidget):
         for img, lbl in self.dataset:
             arr = img.numpy().squeeze() if torch.is_tensor(img) else img
             h, w = arr.shape
-            qimg = QImage(arr.astype('uint8').data, w, h, w, QImage.Format_Grayscale8)
+            qimg = QImage((arr * 255).astype('uint8').data, w, h, w, QImage.Format_Grayscale8)
             pix = QPixmap.fromImage(qimg).scaled(thumb_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             self.all_data.append((pix, lbl))
 
@@ -166,8 +166,7 @@ class PredictionTab(QWidget):
             thumb.setAlignment(Qt.AlignCenter)
             thumb.setToolTip(f"Label: {lbl}")
             thumb.mousePressEvent = lambda e, i=idx: self._open_popup(i)
-            row, col = divmod(idx, 6)
-            self.grid_layout.addWidget(thumb, row, col)
+            self.grid_layout.addWidget(thumb, idx // 6, idx % 6)
         self.max_idx = end
 
     def _on_scroll(self, val):
