@@ -147,15 +147,23 @@ class DatasetViewerTab(QWidget):
         data = self.all_data if sel == "All" else [
             (img, lbl) for img, lbl in self.all_data if str(lbl) == sel
         ]
-        disp = data[:self.max_idx]
+
+        disp_max = min(self.max_idx, len(data))
+        disp = data[:disp_max]
+
         if not disp:
-            self.table.clearContents(); self.table.setRowCount(0); return
+            self.table.clearContents()
+            self.table.setRowCount(0)
+            return
 
         w = self.table.viewport().width()
         cols = max(1, w // (self.thumb_size.width() + 10))
         rows = math.ceil(len(disp) / cols)
-        self.table.setColumnCount(cols); self.table.setRowCount(rows)
+        self.table.setColumnCount(cols)
+        self.table.setRowCount(rows)
 
+        self.table.clearContents()
+        
         for idx, (img, lbl) in enumerate(disp):
             r, c = divmod(idx, cols)
             h, w = img.shape
