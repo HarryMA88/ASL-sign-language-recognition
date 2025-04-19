@@ -8,6 +8,9 @@ from PyQt5.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
 
+import os
+import time
+
 from ml.transforms import get_test_transforms
 from backend.webcam_thread import WebcamThread
 from frontend.utils.label_map import label_map
@@ -53,7 +56,7 @@ class WebcamPopup(QDialog):
         self.frame = frame.copy()
 
         h, w, _ = frame.shape
-        box_size = 300  # increased red-box to 300×300
+        box_size = 300
 
         x_center = int(w * 0.65)
         y_center = h // 2
@@ -71,56 +74,53 @@ class WebcamPopup(QDialog):
             QPixmap.fromImage(qimg).scaled(400, 400, Qt.KeepAspectRatio)
         )
 
-    @staticmethod
-    def extract_hand_region(img):
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        lower = np.array([0, 30, 60], dtype=np.uint8)
-        upper = np.array([20, 150, 255], dtype=np.uint8)
-        mask = cv2.inRange(hsv, lower, upper)
-        kernel = np.ones((5, 5), np.uint8)
-        mask = cv2.dilate(mask, kernel, iterations=2)
-        mask = cv2.GaussianBlur(mask, (5, 5), 0)
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        if not contours:
-            return img
-        hand = max(contours, key=cv2.contourArea)
-        x, y, w, h = cv2.boundingRect(hand)
-        return img[y:y+h, x:x+w]
+    def resize_with_padding(self, image, target_size=(28, 28), pad_color=0):
+        old_h, old_w = image.shape[:2]
+        target_w, target_h = target_size
+        scale = min(target_w / old_w, target_h / old_h)
+        new_w, new_h = int(old_w * scale), int(old_h * scale)
+        resized_image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+        top = (target_h - new_h) // 2
+        bottom = target_h - new_h - top
+        left = (target_w - new_w) // 2
+        right = target_w - new_w - left
+
+        return cv2.copyMakeBorder(
+            resized_image, top, bottom, left, right,
+            cv2.BORDER_CONSTANT, value=pad_color
+        )
 
     def capture_and_predict(self):
         if self.frame is None or self.crop_coords is None:
             QMessageBox.warning(self, "Missing Data", "Webcam frame or crop box not ready.")
             return
 
+        # Crop and preprocess
         x1, y1, x2, y2 = self.crop_coords
         roi = self.frame[y1:y2, x1:x2]
-
-        # optional: refine with skin segmentation
-        # roi = self.extract_hand_region(roi)
-
         gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        resized = cv2.resize(gray, (28, 28))
-        img_np = resized.astype(np.uint8)
+        resized_gray = self.resize_with_padding(gray, target_size=(28, 28), pad_color=0)
 
-        # apply transforms and debug
-        tensor = get_test_transforms()(img_np)
-        print(f"[DEBUG] tensor.shape={tensor.shape}, "
-              f"min={tensor.min():.3f}, max={tensor.max():.3f}, "
-              f"mean={tensor.mean():.3f}, std={tensor.std():.3f}")
-
+        # Transform and batch
+        tensor = get_test_transforms()(resized_gray)
         batch = tensor.unsqueeze(0).to(self.device)
 
+        # Inference
         with torch.no_grad():
-            out = self.model(batch)
+            out   = self.model(batch)
             probs = torch.nn.functional.softmax(out, dim=1).squeeze().cpu().numpy()
-            pred_idx = int(out.argmax(1).item())
+            idx   = int(out.argmax(1).item())
 
-        label = label_map.get(pred_idx, str(pred_idx))
+        # Update UI
+        label = label_map.get(idx, str(idx))
         self.result_label.setText(f"Prediction: {label}")
-
         self.ax.clear()
         self.ax.bar(np.arange(len(probs)), probs)
         self.ax.set_title("Output Probabilities")
         self.ax.set_xlabel("Class")
         self.ax.set_ylabel("Probability")
         self.canvas.draw()
+
+
+
