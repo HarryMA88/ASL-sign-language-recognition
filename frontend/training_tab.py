@@ -223,7 +223,13 @@ class TrainingTab(QWidget):
 
     def stop_training(self):
         if self.thread:
-            self.thread.stop()
-            self.timer_widget.stop()
-            self.btn_stop.setEnabled(False)
-            QMessageBox.information(self, "Stopped", "Training halted.")
+            try:
+                self.thread.error_signal.disconnect(self._on_error)
+            except (TypeError, RuntimeError):
+                pass
+        self.thread.stop()
+        self.btn_start.setEnabled(True)
+        self.thread = None
+        self.timer_widget.stop()
+        self.btn_stop.setEnabled(False)
+        QMessageBox.information(self, "Stopped", "Training halted.")
