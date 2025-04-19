@@ -4,14 +4,14 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QImage, QPixmap
 from backend.dataset import SignLanguageDataset
 
-# This class is for a background thread for importing the dataset so that the gui doesn't freeze
+# This class is for a background thread for loading the dataset images so that the gui doesn't freeze
 class DatasetLoader(QThread):
-    # This is for displaying the images to the gui
-    batchReady     = pyqtSignal(list)
-    # This is for displaying the full dataset once its loaded
-    datasetLoaded  = pyqtSignal(object)
+    # This is for displaying the images to the gui in batches to improve performance
+    batchReady = pyqtSignal(list)
+    # This is for displaying the full dataset with the count of each sign once its loaded
+    datasetLoaded = pyqtSignal(object)
     # This is a signal for when we are finished loading the dataset
-    finished       = pyqtSignal()
+    finished = pyqtSignal()
 
     # This is the constructor and takes the file path for the csv to load and stores it to be loaded
     def __init__(self, path: str):
