@@ -1,3 +1,6 @@
+# frontend/webcam_popup.py
+
+import time
 import cv2
 import numpy as np
 import torch
@@ -41,10 +44,22 @@ class WebcamPopup(QDialog):
         self.result_label.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(self.result_label)
 
+        # ——— Matplotlib canvas with dark-grey bg ———
         self.fig, self.ax = plt.subplots(figsize=(4, 2))
+        # Figure background
+        self.fig.patch.set_facecolor('#2E2E2E')
+        # Axes background & text styling
+        self.ax.set_facecolor('#2E2E2E')
+        self.ax.tick_params(colors='white')
+        self.ax.xaxis.label.set_color('white')
+        self.ax.yaxis.label.set_color('white')
+        self.ax.title.set_color('white')
+
         self.canvas = FigureCanvas(self.fig)
+        self.canvas.setStyleSheet("background-color: #2E2E2E;")
         self.layout.addWidget(self.canvas)
 
+        # Start the webcam thread
         self.thread = WebcamThread()
         self.thread.frame_signal.connect(self.update_frame)
         self.thread.start()
@@ -58,8 +73,12 @@ class WebcamPopup(QDialog):
         self.frame = frame.copy()
 
         h, w, _ = frame.shape
+<<<<<<< HEAD
+        box_size = 200
+=======
         box_size = 300
 
+>>>>>>> main
         x_center = int(w * 0.65)
         y_center = h // 2
         x1 = x_center - box_size // 2
@@ -83,6 +102,21 @@ class WebcamPopup(QDialog):
         new_w, new_h = int(old_w * scale), int(old_h * scale)
         resized_image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
+<<<<<<< HEAD
+    def capture_and_predict(self):
+        if self.frame is None:
+            return
+
+        x1, y1, x2, y2 = getattr(self, "crop_coords", (None,)*4)
+        if None in (x1, y1, x2, y2):
+            QMessageBox.warning(self, "Missing Crop Box", "Crop box not initialized.")
+            return
+
+        roi = self.frame[y1:y2, x1:x2]
+        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        resized = cv2.resize(gray, (28, 28))
+        img_np = resized.astype(np.uint8)
+=======
         top = (target_h - new_h) // 2
         bottom = target_h - new_h - top
         left = (target_w - new_w) // 2
@@ -111,6 +145,7 @@ class WebcamPopup(QDialog):
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
         mask = cv2.erode(mask, kernel, iterations=2)
         mask = cv2.dilate(mask, kernel, iterations=2)
+>>>>>>> main
 
         # 3️⃣ Find largest contour & crop
         cnts = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
@@ -154,13 +189,29 @@ class WebcamPopup(QDialog):
 
         # 🔟 Update UI
         self.result_label.setText(f"Prediction: {label}")
+<<<<<<< HEAD
+
+        # ——— redraw bar chart with orange bars and white text ———
+=======
+>>>>>>> main
         self.ax.clear()
-        self.ax.bar(np.arange(len(probs)), probs)
+        self.ax.set_facecolor('#2E2E2E')
+        self.ax.tick_params(colors='white')
+        self.ax.xaxis.label.set_color('white')
+        self.ax.yaxis.label.set_color('white')
+        self.ax.title.set_color('white')
+
+        # Plot orange bars
+        x = np.arange(len(probs))
+        self.ax.bar(x, probs, color='orange')
         self.ax.set_title("Output Probabilities")
         self.ax.set_xlabel("Class")
         self.ax.set_ylabel("Probability")
+
+<<<<<<< HEAD
         self.canvas.draw()
+=======
 
 
 
-
+>>>>>>> main
