@@ -1,3 +1,6 @@
+# This file contains the configuration settings for the training process of a machine learning model.
+# It includes hyperparameters such as default batch size, number of epochs, learning rate, and other settings.
+# Used for consistency across the training process.
 TRAIN_CONFIG = {
     "batch_size": 64,
     "epochs": 30,

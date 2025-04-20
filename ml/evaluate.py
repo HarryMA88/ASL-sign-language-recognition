@@ -8,9 +8,9 @@ from ml.config import TRAIN_CONFIG
 from ml.transforms import get_test_transforms
 
 # === CONFIG ===
-MODEL_NAME = "alexnet"
+MODEL_NAME = "resnet"
 #MODEL_FILE = "lebron_model.pt"
-MODEL_FILE = "saved_models/alexnet_20250417_231343.pt"
+MODEL_FILE = "saved_models/resnet_0420_1856.pt"
 
 CSV_PATH   = r"C:\Users\Dhruv\Downloads\sign_mnist_digits\sign_mnist_alpha_digits_test.csv"
 
@@ -24,7 +24,7 @@ model_fn = model_registry[MODEL_NAME.lower()]
 model = model_fn(num_classes=TRAIN_CONFIG["num_classes"]).to(device)
 
 checkpoint = torch.load(MODEL_FILE, map_location=device, weights_only=True)
-model.load_state_dict(checkpoint)
+model.load_state_dict(checkpoint["model_state"])
 model.eval()
 
 
@@ -45,10 +45,3 @@ with torch.no_grad():
 
 # === RESULTS ===
 print(f"Test Accuracy: {correct / total:.4f}")
-print(f"\nMisclassified Samples (up to 10 shown):")
-
-for i, (img, true, pred) in enumerate(misclassified[:10]):
-    plt.imshow(img.squeeze(), cmap="gray")
-    plt.title(f"True: {true} | Pred: {pred}")
-    plt.axis("off")
-    plt.show()
