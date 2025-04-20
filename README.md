@@ -92,12 +92,47 @@ python -m venv venv
 source venv/bin/activate        # On macOS/Linux
 venv\Scripts\activate           # On Windows
 ```
+### 2.1 Conda Setup (Optional)
 
-### 3. Install Dependencies
+If you're using Anaconda, follow these steps instead of `python -m venv`:
+
+1. Create a new conda environment:
+
+```bash
+conda create -n asl-env python=3.10
+conda activate asl-env
+```
+
+2. Install core dependencies with `conda`:
+
+```bash
+conda install numpy pandas matplotlib opencv scikit-learn pyqt sympy tqdm -c conda-forge
+```
+
+3. Install PyTorch (CUDA 12.1):
+
+```bash
+pip install torch==2.5.1+cu121 torchvision==0.20.1+cu121 torchaudio==2.5.1+cu121 --index-url https://download.pytorch.org/whl/cu121
+```
+
+4. Install remaining dependencies with pip:
+
+```bash
+pip install -r requirements.txt --no-deps
+```
+### 3. Install Dependencies (Skip this if you followed 2.1)
 
 This application requires the GPU-enabled versions of `torch`, `torchvision`, and `torchaudio` built for CUDA 12.1.
 
 To install them correctly, run the following **before** installing the rest of the requirements:
+
+#### Windows (CMD or PowerShell):
+
+```bash
+pip install torch==2.5.1+cu121 torchvision==0.20.1+cu121 torchaudio==2.5.1+cu121 --index-url https://download.pytorch.org/whl/cu121
+```
+
+#### macOS/Linux (bash/zsh):
 
 ```bash
 pip install torch==2.5.1+cu121 torchvision==0.20.1+cu121 torchaudio==2.5.1+cu121 \
@@ -108,7 +143,6 @@ Then install the remaining packages:
 ```bash
 pip install -r requirements.txt
 ```
-
 ### 4. Prepare Your Dataset
 If you have custom datasets:
 Ensure you have a CSV-formatted dataset where:
@@ -127,7 +161,18 @@ python main.py
 
 This will launch the PyQt5 GUI!
 
+###Extra
+If you wish to test the model and it's accuracy, we have provided an evaluate.py script that checks a selected model for you.
+
+1) First head into evaluate.py
+2) Change these parameters
+![image](https://github.com/user-attachments/assets/dc90db96-cd39-4114-82b5-aa92cf19fda3)
+3) Execute the script from the command line
+```bash
+python -m ml.evaluate
+```
+
 ### Contributors
-Dhruv Sawant - Machine Learning and Admin
-Harry Ma - Full Stack
-Leo Chu - Frontend
+- Dhruv Sawant - Machine Learning and Admin
+- Harry Ma - Full Stack
+- Leo Chu - Frontend
