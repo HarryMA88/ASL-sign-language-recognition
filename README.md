@@ -161,7 +161,7 @@ python main.py
 
 This will launch the PyQt5 GUI!
 
-###Extra
+### Extra
 If you wish to test the model and it's accuracy, we have provided an evaluate.py script that checks a selected model for you.
 
 1) First head into evaluate.py
