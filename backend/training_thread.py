@@ -6,8 +6,10 @@ from ml.models import model_registry
 from ml.config import TRAIN_CONFIG
 from backend.dataset import SignLanguageDataset
 
-# This class is a background thread for training the models
 class TrainingThread(QThread):
+    """
+    This class is a background thread for training the models
+    """
     # This is to display how many epochs have passed
     epoch_signal = pyqtSignal(int, float, float, float)
     # This is to display the metrics of the training once finished
@@ -15,8 +17,10 @@ class TrainingThread(QThread):
     # This is to display any potential errors
     error_signal = pyqtSignal(str)
 
-    # This is the constructor which takes in the settings for which we are going to train our models with
     def __init__(self, model_choice: str, dataset: SignLanguageDataset, train_pct: float, batch_size: int, num_epochs: int):
+        """
+        This is the constructor which takes in the settings for which we are going to train our models with
+        """
         super().__init__()
         self.model_choice = model_choice.lower()
         self.dataset = dataset
@@ -29,6 +33,9 @@ class TrainingThread(QThread):
         self.metadata = {}
 
     def run(self):
+        """
+        This is where the main logic of the thread is in
+        """
         # Tries to train a model with the specified settings otherwise, throw an exception
         try:
             # Splits the dataset into a training set and testing set
@@ -66,6 +73,8 @@ class TrainingThread(QThread):
         except Exception as e:
             self.error_signal.emit(str(e))
 
-    # This method stops training the model
     def stop(self):
+        """
+        This method stops training the model
+        """
         self._is_running = False
