@@ -30,6 +30,7 @@ Users can select a model that they have trained (these are the .pt files located
 
 
 ## The Directory
+```
 ├── backend/  #Contains all the threads to make GUI concurrent and lag-free
 │   ├── dataset.py
 │   ├── dataset_loader.py
@@ -71,10 +72,52 @@ Users can select a model that they have trained (these are the .pt files located
 ├── .gitignore
 ├── style.qss
 └── uploadComplete.png
+```
 
 ## Getting Started
-Install all dependencies using:
 
+Follow these steps to set up and run the application after cloning the repository:
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/COMPSYS302/project-deep-neural-network-python-dnn_team_28.git
+cd project-deep-neural-network-python-dnn_team_28
 ```
+
+### 2. (Optional but Recommended) Create a Virtual Environment
+
+```bash
+python -m venv venv
+source venv/bin/activate        # On macOS/Linux
+venv\Scripts\activate           # On Windows
+```
+
+### 3. Install Dependencies
+
+```bash
 pip install -r requirements.txt
 ```
+
+### 4. Prepare Your Dataset
+If you have custom datasets:
+Ensure you have a CSV-formatted dataset where:
+- The first column is the label.
+- The next 784 columns are pixel values for a 28×28 grayscale image.
+
+Place it inside the `datasets/` folder.
+
+Otherwise, feel free to use the ones we have provided!
+
+### 5. Run the Application (GUI)
+
+```bash
+python main.py
+```
+
+This will launch the PyQt5 GUI!
+
+### Contributors
+Dhruv Sawant - Machine Learning and Admin
+Harry Ma - Full Stack
+Leo Chu - Frontend
