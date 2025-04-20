@@ -3,6 +3,13 @@ import torch.nn as nn
 from ml.config import TRAIN_CONFIG
 
 class SEBlock(nn.Module):
+    """
+    Squeeze-and-Excitation block for channel-wise attention.
+
+    Args:
+        channels (int): Number of input channels.
+        reduction (int): Reduction ratio for the intermediate FC layer.
+    """
     def __init__(self, channels, reduction=16):
         super().__init__()
         self.pool = nn.AdaptiveAvgPool2d(1)
@@ -21,6 +28,17 @@ class SEBlock(nn.Module):
 
 
 class MiniInceptionBlock(nn.Module):
+    """
+    A simplified Inception block with 4 branches:
+    - 1x1 conv
+    - 1x1 → 3x3 conv
+    - 1x1 → 5x5 conv
+    - 3x3 max pool → 1x1 conv
+
+    Args:
+        in_channels (int): Number of input channels.
+        out_channels (int): Total output channels across all branches.
+    """
     def __init__(self, in_channels, out_channels):
         super().__init__()
         branch_channels = out_channels // 4
@@ -51,6 +69,15 @@ class MiniInceptionBlock(nn.Module):
 
 
 class Lebron23(nn.Module):
+    """
+    Lebron2.3: A compact CNN for ASL or digit classification with ~28×28 inputs.
+
+    Architecture:
+    - Stem: conv → relu → maxpool
+    - Block1: MiniInception → SE → relu → maxpool
+    - Block2: MiniInception → SE → relu → global pooling
+    - Classifier: Flatten → FC → relu → dropout → output
+    """
     def __init__(self, num_classes=TRAIN_CONFIG["num_classes"]):
         super().__init__()
         self.stem = nn.Sequential(
@@ -91,4 +118,13 @@ class Lebron23(nn.Module):
         return x
 
 def get_model(num_classes=TRAIN_CONFIG["num_classes"]):
+    """
+    Returns an instance of the Lebron23 model.
+
+    Args:
+        num_classes (int): Number of output classes.
+
+    Returns:
+        Lebron23: Instantiated model.
+    """
     return Lebron23(num_classes=num_classes)

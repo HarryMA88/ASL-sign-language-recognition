@@ -1,40 +1,32 @@
-import torch
 import torch.nn as nn
+from torchvision.models import alexnet
 from ml.config import TRAIN_CONFIG
 
-class AlexNetModified(nn.Module):
-    def __init__(self, num_classes: int):
-        super().__init__()
+def get_model(num_classes: int=TRAIN_CONFIG["num_classes"]):
+    """
+    Creates a modified AlexNet model for 28×28 grayscale images.
 
-        self.features = nn.Sequential(
-            nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
+    Args:
+        num_classes (int): Number of output classes for the model.
+    """
+    model = alexnet(weights=None)
 
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
+    # 1. Modify first conv layer for grayscale 28×28
+    model.features[0] = nn.Conv2d(
+        in_channels=1, out_channels=64,
+        kernel_size=3, stride=1, padding=1
+    )
 
-            nn.Conv2d(128, 256, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-        )
+    # 2. Replace avgpool to handle smaller spatial size (from 6×6 → 1×1)
+    model.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
-        with torch.no_grad():
-            dummy = torch.zeros(1, 1, 28, 28)
-            flattened_size = self.features(dummy).view(1, -1).shape[1]
+    # 3. Modify classifier for smaller flattened size and fewer params
+    model.classifier = nn.Sequential(
+    nn.Dropout(p=0.5),
+    nn.Linear(256, 128),
+    nn.BatchNorm1d(128),
+    nn.ReLU(inplace=True),
+    nn.Linear(128, num_classes)
+    )
 
-        self.classifier = nn.Sequential(
-            nn.Dropout(),
-            nn.Linear(flattened_size, 128),
-            nn.ReLU(inplace=True),
-            nn.Linear(128, num_classes)
-        )
-
-    def forward(self, x):
-        x = self.features(x)
-        x = x.view(x.size(0), -1)
-        return self.classifier(x)
-
-
-def get_model(num_classes=TRAIN_CONFIG["num_classes"]):
-    return AlexNetModified(num_classes)
+    return model
