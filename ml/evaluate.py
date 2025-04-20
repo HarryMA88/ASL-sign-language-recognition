@@ -8,11 +8,11 @@ from ml.config import TRAIN_CONFIG
 from ml.transforms import get_test_transforms
 
 # === CONFIG ===
-MODEL_NAME = "resnet"
-#MODEL_FILE = "lebron_model.pt"
-MODEL_FILE = "saved_models/resnet_0420_1856.pt"
+#Change the model name to the one you want to evaluate. Change the path to the model file.
+MODEL_NAME = "resnet" #Change me
+MODEL_FILE = "saved_models/resnet_0420_1856.pt" #Change me
 
-CSV_PATH   = r"C:\Users\Dhruv\Downloads\sign_mnist_digits\sign_mnist_alpha_digits_test.csv"
+CSV_PATH   = "datasets/sign_mnist_alpha_digits_test.csv"
 
 # === DATASET ===
 test_dataset = SignLanguageDataset.from_csv(CSV_PATH, transform= get_test_transforms())
