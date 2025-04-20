@@ -3,18 +3,25 @@ import cv2
 import numpy as np
 from PyQt5.QtCore import QThread, pyqtSignal
 
-# This is a background thread for the webcam
 class WebcamThread(QThread):
+    """
+    This is a background thread for the webcam
+    """
     # Displays the current frame from the webcam
     frame_signal = pyqtSignal(np.ndarray)
 
-    # Constructor to set up the webcam
     def __init__(self):
+        """
+        Constructor to set up the webcam
+        """
         super(WebcamThread, self).__init__()
         self._is_running = True
         self.cap = None
 
     def run(self):
+        """
+        This is where the main logic of the thread is in
+        """
         # Turns on the device's default webcam
         self.cap = cv2.VideoCapture(0)
         # Continuously capture input from the webcam
@@ -26,6 +33,8 @@ class WebcamThread(QThread):
         # Turns off the webcam
         self.cap.release()
 
-    # Method to stop the webcam
     def stop(self):
+        """
+        Method to stop the webcam
+        """
         self._is_running = False
