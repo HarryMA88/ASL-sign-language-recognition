@@ -10,7 +10,7 @@ from ml.transforms import get_test_transforms
 # === CONFIG ===
 MODEL_NAME = "resnet"
 #MODEL_FILE = "lebron_model.pt"
-MODEL_FILE = "saved_models/resnet_0420_1743.pt"
+MODEL_FILE = "saved_models/resnet_0420_1856.pt"
 
 CSV_PATH   = r"C:\Users\Dhruv\Downloads\sign_mnist_digits\sign_mnist_alpha_digits_test.csv"
 
@@ -45,10 +45,3 @@ with torch.no_grad():
 
 # === RESULTS ===
 print(f"Test Accuracy: {correct / total:.4f}")
-print(f"\nMisclassified Samples (up to 10 shown):")
-
-for i, (img, true, pred) in enumerate(misclassified[:10]):
-    plt.imshow(img.squeeze(), cmap="gray")
-    plt.title(f"True: {true} | Pred: {pred}")
-    plt.axis("off")
-    plt.show()

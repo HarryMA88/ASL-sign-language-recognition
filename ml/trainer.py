@@ -87,11 +87,16 @@ def train_loop(model :nn.Module, train_loader :DataLoader, val_loader :DataLoade
             images, labels = to_device(images, labels, device=device)
             optimizer.zero_grad()
 
-            # Enable automatic mixed precision for faster training with float16 on CUDA
-            with autocast(device_type="cuda"):
+            if(model_name.lower() == "alexnet"):
                 outputs = model(images)
                 loss = criterion(outputs, labels)
+            else:
+                # Enable automatic mixed precision for faster training with float16 on CUDA
+                with autocast(device_type="cuda"):
+                    outputs = model(images)
+                    loss = criterion(outputs, labels)
 
+            
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
