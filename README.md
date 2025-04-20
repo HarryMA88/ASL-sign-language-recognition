@@ -95,6 +95,16 @@ venv\Scripts\activate           # On Windows
 
 ### 3. Install Dependencies
 
+This application requires the GPU-enabled versions of `torch`, `torchvision`, and `torchaudio` built for CUDA 12.1.
+
+To install them correctly, run the following **before** installing the rest of the requirements:
+
+```bash
+pip install torch==2.5.1+cu121 torchvision==0.20.1+cu121 torchaudio==2.5.1+cu121 \
+  --index-url https://download.pytorch.org/whl/cu121
+```
+Then install the remaining packages:
+
 ```bash
 pip install -r requirements.txt
 ```
