@@ -167,7 +167,7 @@ If you wish to test the model and it's accuracy, we have provided an evaluate.py
 1) First head into evaluate.py
 2) Change these parameters
 ![image](https://github.com/user-attachments/assets/dc90db96-cd39-4114-82b5-aa92cf19fda3)
-3)execute the script from the command line
+3) Execute the script from the command line
 ```bash
 python -m ml.evaluate
 ```
