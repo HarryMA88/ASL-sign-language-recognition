@@ -12,11 +12,11 @@ MarkupSafe==3.0.2
 matplotlib==3.10.1
 mpmath==1.3.0
 networkx==3.4.2
-numpy==2.2.4
+numpy>=1.26.0
 opencv-python==4.11.0.86
 packaging==24.2
 pandas==2.2.3
-pillow==11.2.0
+pillow>=11.2.0
 pyparsing==3.2.3
 PyQt5==5.15.11
 PyQt5-Qt5==5.15.2
