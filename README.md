@@ -5,26 +5,74 @@
 This project is a deep learning-based system for recognizing American Sign Language (ASL) signs from 28×28 grayscale images. The application provides an easy to use GUI and 3 DNN models to learn a dataset. The application also provides live webcam input recognition as well as recognition for a customised input dataset.
 
 ## The Application
+### Dataset Import
+We provide users with an efficient and easy to use tab to import data to train their desired models upon.
+
+![image](https://github.com/user-attachments/assets/ea0c2fa2-8355-4203-ad14-80140e22e65e)
+
+### The Dataset Viewer
+Moreover, we provide an easy way for users to navigate and view their .csv file as images while also providing an efficient way to filter the dataset based on the label. We also provide basic statistics to 
+visualise the number of samples. We make monitoring the dataset easy.
+
+![image](https://github.com/user-attachments/assets/617bed7e-3b3a-493f-9685-8329eeec6fc7)
+![image](https://github.com/user-attachments/assets/8098a29f-0fe4-4a9c-a466-0d1308aaadfc)
+
+### The Training Tab
+This is where the magic happens. Users can choose the model they wish to train and the hyperparameters alongside it. We provide 2 pretrained models Resnet18 and Alexnet and a 3rd custom CNN model inspired by the Inception model with SE Attention Blocks. The king of our application! You can also keep tabs on the training progress and see important metrics passed by the model as a callback, these include the validation accuracy, the training loss, the number of epochs left and timer to show the progress of the training.
+
+![image](https://github.com/user-attachments/assets/4fb7cd0d-1161-4b83-a2de-d0e426b3de55)
+
+### The Prediction Tab
+Users can select a model that they have trained (these are the .pt files located in /saved_models) and use the model to make inferences on a dataset. Users can also turn on their webcam to take screenshots of hand signs they make!
+
+![image](https://github.com/user-attachments/assets/be7fdd02-f957-4230-9e07-b04e27c338ae)
+![image](https://github.com/user-attachments/assets/bb5e270f-3207-4cb3-9b97-207f1a07f8ab)
 
 
-## Version & Dependencies
+## The Directory
+├── backend/  #Contains all the threads to make GUI concurrent and lag-free
+│   ├── dataset.py
+│   ├── dataset_loader.py
+│   ├── import_thread.py
+│   ├── training_thread.py
+│   └── webcam_thread.py
+│
+├── data/ #Folder that stores the dataset imports
+├── datasets/ #Provides 2 datasets - 1 training and 1 test set.
+│
+├── frontend/ #Contains all things GUI related
+│   ├── styles/
+│   ├── utils/
+│   ├── dataset_import_tab.py
+│   ├── dataset_viewer_tab.py
+│   ├── main_window.py
+│   ├── prediction_popup.py
+│   ├── prediction_tab.py
+│   ├── timer_widget.py
+│   ├── timer.py
+│   ├── training_tab.py
+│   └── webcam_popup.py
+│
+├── ml/ # Contains all things Machine Learning related
+│   ├── models/ # Architecture for the 3 DNN Models provided
+│      ├── resnet.py
+│      ├── lebron.py
+│      ├── alexnet.py
+│   ├── config.py
+│   ├── evaluate.py # Script to test the saved model accuracy against provided test set.
+│   ├── trainer.py # Main training loop
+│   └── transforms.py
+│
+├── saved_models/ #Models are saved in here once training is finished.
+│
+├── main.py #Main entry point for the app.
+├── requirements.txt
+├── README.md
+├── .gitignore
+├── style.qss
+└── uploadComplete.png
 
-### Python Version
-
-- Python 3.10+
-
-### Required Libraries
-
-| Library       | Version (Minimum) |
-| ------------- | ----------------- |
-| torch         | 2.0               |
-| torchvision   | 0.15              |
-| PyQt5         | 5.15              |
-| matplotlib    | 3.5               |
-| opencv-python | —                 |
-| pandas        | —                 |
-| numpy         | —                 |
-
+## Getting Started
 Install all dependencies using:
 
 ```
