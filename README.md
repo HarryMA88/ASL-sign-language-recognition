@@ -117,3 +117,7 @@ python main.py
 
 This will launch the PyQt5 GUI!
 
+### Contributors
+Dhruv Sawant - Machine Learning and Admin
+Harry Ma - Full Stack
+Leo Chu - Frontend
