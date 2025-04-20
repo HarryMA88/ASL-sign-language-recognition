@@ -261,11 +261,11 @@ class TrainingTab(QWidget):
 
         self.ax_loss.clear()
         self.ax_loss.set_title("Training Loss", color='white')
-        self.ax_loss.plot(range(1, epoch+1), self.losses, color='white')
+        self.ax_loss.plot(range(1, epoch+1), self.losses, color='orange')
 
         self.ax_acc.clear()
         self.ax_acc.set_title("Validation Accuracy", color='white')
-        self.ax_acc.plot(range(1, epoch+1), self.accs, color='white')
+        self.ax_acc.plot(range(1, epoch+1), self.accs, color='green')
 
         self.canvas.draw()
 
