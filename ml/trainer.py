@@ -69,12 +69,13 @@ def train_loop(model :nn.Module, train_loader :DataLoader, val_loader :DataLoade
     optimizer = Adam(model.parameters(), lr=TRAIN_CONFIG["learning_rate"], weight_decay=TRAIN_CONFIG["weight_decay"])
     scheduler = CosineAnnealingLR(optimizer, T_max=epochs)
     scaler = GradScaler(device=TRAIN_CONFIG["device"]) # Used for automatic mixed precision (AMP) to speed up training on CUDA
-
+    early_stop = False 
     metrics = {"train_loss": [], "val_acc": []}
     start_time = time.time()
 
     for epoch in range(epochs):
         if should_stop and should_stop():
+            early_stop = True
             break
 
         model.train()
@@ -82,6 +83,7 @@ def train_loop(model :nn.Module, train_loader :DataLoader, val_loader :DataLoade
 
         for images, labels in train_loader:
             if should_stop and should_stop():
+                early_stop = True
                 break
 
             images, labels = to_device(images, labels, device=device)
@@ -105,7 +107,7 @@ def train_loop(model :nn.Module, train_loader :DataLoader, val_loader :DataLoade
             correct += (outputs.argmax(1) == labels).sum().item()
             total += labels.size(0)
 
-        train_loss = running_loss / total
+        train_loss = running_loss / total if total > 0 else 0.0
         metrics["train_loss"].append(train_loss)
         scheduler.step()
 
@@ -114,27 +116,30 @@ def train_loop(model :nn.Module, train_loader :DataLoader, val_loader :DataLoade
         with torch.no_grad():
             for images, labels in val_loader:
                 if should_stop():
+                    early_stop = True
                     break
                 images, labels = images.to(device), labels.to(device)
                 preds = model(images).argmax(1)
                 correct += (preds == labels).sum().item()
                 total += labels.size(0)
 
-        val_acc = correct / total
+        val_acc = correct / total if total > 0 else 0.0
+
         metrics["val_acc"].append(val_acc)
         emit_epoch(epoch + 1, train_loss, val_acc, time.time() - start_time)
 
-    os.makedirs("saved_models", exist_ok=True)
-    timestamp = time.strftime("%m%d_%H%M")
-    save_path = os.path.join("saved_models", f"{model_name}_{timestamp}.pt")
-    torch.save({
-        "model_state": model.state_dict(),
-        "metadata": {
-            "model_choice": model_name.lower(),
-            "input_shape": (28, 28),
-            "num_classes": TRAIN_CONFIG["num_classes"]
-        }
-    }, save_path)
+    if not early_stop:
+        os.makedirs("saved_models", exist_ok=True)
+        timestamp = time.strftime("%m%d_%H%M")
+        save_path = os.path.join("saved_models", f"{model_name}_{timestamp}.pt")
+        torch.save({
+            "model_state": model.state_dict(),
+            "metadata": {
+                "model_choice": model_name.lower(),
+                "input_shape": (28, 28),
+                "num_classes": TRAIN_CONFIG["num_classes"]
+            }
+        }, save_path)
 
     metrics["elapsed"] = time.time() - start_time
     return metrics

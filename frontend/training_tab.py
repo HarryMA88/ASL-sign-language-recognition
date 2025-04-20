@@ -267,8 +267,13 @@ class TrainingTab(QWidget):
         self.btn_stop.setEnabled(False)
         self.timer_widget.stop()
         self.progress_bar.hide()
-        QMessageBox.information(self, "Done", "Training complete.")
-        self.training_finished.emit(self.thread.model, self.thread.metadata)
+
+        if len(meta.get("train_loss", [])) < self.thread.num_epochs:
+            QMessageBox.information(self, "Stopped", "Training was halted before completion.")
+        else:
+            QMessageBox.information(self, "Done", "Training complete.")
+            self.training_finished.emit(self.thread.model, self.thread.metadata)
+
 
     @pyqtSlot(str)
     def _on_error(self, msg):
@@ -283,4 +288,3 @@ class TrainingTab(QWidget):
             self.thread.stop()
             self.timer_widget.stop()
             self.btn_stop.setEnabled(False)
-            QMessageBox.information(self, "Stopped", "Training halted.")
