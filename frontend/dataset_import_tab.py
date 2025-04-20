@@ -10,10 +10,14 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QPixmap
 from backend.import_thread import ImportThread
 
+
 class DatasetImportTab(QWidget):
     """
-    A tab where you can load CSV datasets. When loading finishes, it’ll let the rest of the app know,
-    and you can clear out datasets too. If there’s already a CSV in the data folder, it loads automatically.
+    Tab for importing and clearing CSV datasets.
+
+    Signals:
+      - dataset_loaded(images, labels, shape): emitted on successful import
+      - dataset_cleared(): emitted when datasets are removed
     """
     dataset_loaded = pyqtSignal(np.ndarray, np.ndarray, tuple)
     dataset_cleared = pyqtSignal()
@@ -21,7 +25,7 @@ class DatasetImportTab(QWidget):
     def __init__(self):
         super().__init__()
 
-        # Give everything a dark colour scheme
+        # Apply dark theme to all widgets
         self.setStyleSheet("""
         QWidget { background: #2E2E2E; color: #EEEEEE; }
         QPushButton { background: #444; color: #EEE; border: none; border-radius:5px; padding:8px; font-weight:bold; }
@@ -29,19 +33,20 @@ class DatasetImportTab(QWidget):
         QProgressBar { background: #CCC; border:1px solid #555; border-radius:5px; text-align:center; }
         QProgressBar::chunk { background: #555; }
         QLabel { color: #CCC; }
-        """)
+        """
+        )
 
-        # Set up layouts for buttons and widgets
+        # Main layout and button row
         layout = QVBoxLayout(self)
         btn_layout = QHBoxLayout()
 
-        # Button to add a new dataset
+        # "Add Dataset" button
         self.btn_import = QPushButton("Add Dataset")
         self.btn_import.setMinimumSize(150, 40)
         self.btn_import.clicked.connect(self.import_dataset)
         btn_layout.addWidget(self.btn_import)
 
-        # Button to remove the current dataset
+        # "Remove Dataset" button
         self.btn_remove = QPushButton("Remove Dataset")
         self.btn_remove.setMinimumSize(150, 40)
         self.btn_remove.clicked.connect(self.remove_dataset)
@@ -49,52 +54,51 @@ class DatasetImportTab(QWidget):
 
         layout.addLayout(btn_layout)
 
-        # Bar showing how far along the import is
+        # Progress bar for import thread
         self.progress_bar = QProgressBar()
         layout.addWidget(self.progress_bar)
 
-        # Button to halt loading in its tracks (hidden until you start)
+        # Button to stop the import process
         self.btn_stop_loading = QPushButton("Stop Loading")
         self.btn_stop_loading.setMinimumSize(150, 30)
         self.btn_stop_loading.clicked.connect(self.stop_loading)
-        self.btn_stop_loading.hide()
+        self.btn_stop_loading.hide()  # hidden until import starts
         layout.addWidget(self.btn_stop_loading)
 
-        # Label telling you what’s happening
+        # Status label for import progress or messages
         self.lbl_status = QLabel("")
         self.lbl_status.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.lbl_status)
 
-        # Picture to let you know everything uploaded sweetly
+        # Success icon, displayed on completion
         self.success_label = QLabel()
         self.success_label.setAlignment(Qt.AlignCenter)
         self.success_label.setVisible(False)
         layout.addWidget(self.success_label)
 
-        # Text to show when there’s nothing loaded
+        # Placeholder text and icon when no dataset is loaded
         self.placeholder_label = QLabel("No Data")
         self.placeholder_label.setAlignment(Qt.AlignCenter)
         self.placeholder_label.setStyleSheet("font-weight:bold; font-size:16pt;")
         layout.addWidget(self.placeholder_label)
 
-        # Icon to show there’s no data yet
         self.placeholder_icon = QLabel()
         self.placeholder_icon.setAlignment(Qt.AlignCenter)
-        placeholder_pix = QPixmap('redCross.png')
-        if not placeholder_pix.isNull():
-            placeholder_pix = placeholder_pix.scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            self.placeholder_icon.setPixmap(placeholder_pix)
+        pix = QPixmap('redCross.png')
+        if not pix.isNull():
+            pix = pix.scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            self.placeholder_icon.setPixmap(pix)
         layout.addWidget(self.placeholder_icon)
 
-        # Prepare the import thread variable and ensure the data folder exists
+        # Prepare import thread and data directory
         self.import_thread = None
         self.data_folder = "data"
         os.makedirs(self.data_folder, exist_ok=True)
 
-        # By default, hide the remove button until there’s something to remove
+        # Hide "Remove" until a dataset is present
         self.btn_remove.hide()
 
-        # Check if there’s already a CSV waiting and load it right away
+        # Auto-load existing CSV if found
         existing = [f for f in os.listdir(self.data_folder) if f.lower().endswith('.csv')]
         if existing:
             csv_path = os.path.join(self.data_folder, existing[0])
@@ -105,15 +109,16 @@ class DatasetImportTab(QWidget):
             self.placeholder_icon.hide()
 
     def import_dataset(self):
-        # Let the user pick a CSV and copy it into our data folder
+        """Open file dialog, copy selected CSV, and start import."""
         path, _ = QFileDialog.getOpenFileName(self, "Select CSV", "", "CSV Files (*.csv)")
         if not path:
-            return
+            return  # user cancelled
 
+        # Copy chosen file into local data folder
         dest = os.path.join(self.data_folder, os.path.basename(path))
         shutil.copy(path, dest)
 
-        # Kick off the import and update the buttons and placeholders
+        # Begin import and adjust UI
         self._start_import_thread(dest)
         self.btn_import.hide()
         self.btn_remove.show()
@@ -121,13 +126,14 @@ class DatasetImportTab(QWidget):
         self.placeholder_icon.hide()
 
     def _start_import_thread(self, path):
-        # Get the UI ready for a fresh import
+        """Initialize and run the background thread to import the CSV."""
+        # Reset UI elements for new import
         self.progress_bar.setValue(0)
         self.lbl_status.setText("Loading dataset...")
         self.success_label.setVisible(False)
         self.btn_stop_loading.show()
 
-        # Launch the background thread that does the heavy lifting
+        # Launch thread and connect signals
         self.import_thread = ImportThread(path)
         self.import_thread.progress_signal.connect(self.update_progress)
         self.import_thread.finished_signal.connect(self.on_import_finished)
@@ -135,37 +141,40 @@ class DatasetImportTab(QWidget):
 
     @pyqtSlot(int, str)
     def update_progress(self, val, eta):
-        # Update the progress bar and ETA message
+        """Update progress bar and status text."""
         self.progress_bar.setValue(val)
-        self.lbl_status.setText(f"ETA: {eta if not eta.startswith('-') else '0m 0s'}")
+        # Show ETA, default to 0 if negative
+        status = eta if not eta.startswith('-') else '0m 0s'
+        self.lbl_status.setText(f"ETA: {status}")
 
     @pyqtSlot(np.ndarray, np.ndarray, tuple)
     def on_import_finished(self, images, labels, shape):
-        # Once it’s done, fill the UI with the good news
+        """Finalize UI and emit loaded signal when import completes."""
         self.progress_bar.setValue(100)
         self.lbl_status.setText("UPLOAD COMPLETE")
         self.lbl_status.setStyleSheet("font-weight:bold; font-size:16pt;")
         self.btn_stop_loading.hide()
 
-        # Show the cheerful success icon
+        # Display completion icon
         pix = QPixmap('uploadComplete.png')
         if not pix.isNull():
             pix = pix.scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             self.success_label.setPixmap(pix)
             self.success_label.setVisible(True)
 
-        # Let the rest of the app know we’ve got data
+        # Notify listeners that dataset is ready
         self.dataset_loaded.emit(images, labels, shape)
 
     def stop_loading(self):
-        # Stop the thread if it’s still going and let the user know we halted
+        """Stop the import thread and update status."""
         if self.import_thread:
             self.import_thread.stop()
         self.lbl_status.setText("LOADING HALTED")
         self.btn_stop_loading.hide()
 
     def remove_dataset(self):
-        # Clear out any CSVs we’ve got
+        """Delete any CSV files and reset the UI to initial state."""
+        # Remove all CSVs in data folder
         for fname in os.listdir(self.data_folder):
             if fname.lower().endswith('.csv'):
                 try:
@@ -173,7 +182,7 @@ class DatasetImportTab(QWidget):
                 except OSError:
                     pass
 
-        # Put everything back to how it was before any data
+        # Reset UI elements
         self.progress_bar.setValue(0)
         self.lbl_status.clear()
         self.success_label.clear()
