@@ -9,40 +9,51 @@ from PyQt5.QtGui import QImage, QPixmap, QFont, QBrush, QColor
 
 class DatasetViewerTab(QWidget):
     """
-    Displays dataset thumbnails with label filtering and counts.
-    Supports dynamic loading as the user scrolls.
+    A tab that shows your dataset: lets you filter by label, peek at label counts,
+    and endlessly scroll through thumbnails.
+
+    Hooks:
+      - dataset_loaded(images, labels, shape): load fresh data
+      - dataset_cleared(): clear everything out
     """
     def __init__(self):
         super().__init__()
 
-        # Apply dark theme and Magistral Light font
+        # Slap on a dark theme & Magistral Light font
         self.setStyleSheet("""
         QWidget { background: #2E2E2E; color: #EEEEEE; }
-        QComboBox { background: #444444; color: #EEEEEE; border:none; border-radius:5px; padding:4px; }
+        QComboBox { background: #444444; color: #EEEEEE;
+                    border: none; border-radius:5px; padding:4px; }
+        /* Stats table styling */
         QTableWidget#statsTable {
-            background: #2E2E2E; color: #FFFFFF; gridline-color: #444444;
+            background-color: #2E2E2E;
+            color: #FFFFFF;
+            gridline-color: #444444;
         }
         QHeaderView::section {
-            background: #333333; color: #FFFFFF;
+            background-color: #333333;
+            color: #FFFFFF;
             padding: 4px;
             font-family: 'Magistral Light', Arial, sans-serif;
-            font-size: 11pt; font-weight: bold; font-style: italic;
+            font-size: 11pt;
+            font-weight: bold;
+            font-style: italic;
         }
         QTableWidget { background: #2E2E2E; gridline-color: #444444; }
         """)
 
-        # Main vertical layout
+        # Main layout box with padding
         main = QVBoxLayout(self)
         main.setContentsMargins(5, 5, 5, 5)
         main.setSpacing(5)
 
-        # Dropdown to filter by label
+        # Add a filter dropdown up top
         self.filter_combo = QComboBox()
         self.filter_combo.addItem("All")
         self.filter_combo.currentIndexChanged.connect(self.refresh_table)
         main.addWidget(self.filter_combo)
 
-        # Table showing counts per label
+        # Show label counts in a little stats table
         self.stats_table = QTableWidget()
         self.stats_table.setObjectName("statsTable")
         self.stats_table.setColumnCount(2)
@@ -53,7 +64,7 @@ class DatasetViewerTab(QWidget):
         self.stats_table.horizontalHeader().setStretchLastSection(True)
         main.addWidget(self.stats_table)
 
-        # Grid for image thumbnails
+        # Grid for thumbnail previews
         self.table = QTableWidget()
         self.table.setSelectionMode(QAbstractItemView.NoSelection)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -62,115 +73,120 @@ class DatasetViewerTab(QWidget):
         self.table.verticalHeader().setVisible(False)
         main.addWidget(self.table)
 
-        # Internal state
-        self.all_data   = []           # list of (image_array, label)
+        # Tidy up internal vars
+        self.all_data = []           # holds (image, label) pairs
         self.thumb_size = QSize(100, 100)
-        self.page_size  = 0            # number of items per batch
-        self.max_idx    = 0            # current maximum index to display
+        self.page_size = 0           # how many to load per batch
+        self.max_idx = 0             # current end index
 
-        # Load more when scrolling near bottom
+        # Endless scrolling setup
         self.table.verticalScrollBar().valueChanged.connect(self._on_scroll)
 
     @pyqtSlot(np.ndarray, np.ndarray, tuple)
     def dataset_loaded(self, images, labels, shape):
-        """Receive new dataset, update filter options, stats, and show initial thumbnails."""
+        """Load new data, rebuild filter options and stats, then show first batch."""
         self.all_data = list(zip(images, labels))
-        unique_labels = sorted({lbl for _, lbl in self.all_data})
-
-        # Rebuild filter dropdown
+        uniq = sorted({lbl for _, lbl in self.all_data})
         self.filter_combo.blockSignals(True)
         self.filter_combo.clear()
         self.filter_combo.addItem("All")
-        for lbl in unique_labels:
-            self.filter_combo.addItem(str(lbl))
+        for u in uniq:
+            self.filter_combo.addItem(str(u))
         self.filter_combo.blockSignals(False)
 
-        # Update stats and paging
         self._populate_stats_table()
         total = len(self.all_data)
         self.page_size = math.ceil(total / 10) if total else 0
         self.max_idx = min(self.page_size, total)
-
-        # Display first batch
         self.refresh_table()
 
     @pyqtSlot()
     def dataset_cleared(self):
-        """Clear all displayed data and reset controls."""
+        """Wipe everything clean back to the start state."""
         self.all_data.clear()
-        self.filter_combo.clear()
-        self.filter_combo.addItem("All")
-        self.stats_table.clearContents()
-        self.stats_table.setRowCount(0)
-        self.table.clearContents()
-        self.table.setRowCount(0)
+        self.filter_combo.clear(); self.filter_combo.addItem("All")
+        self.stats_table.clearContents(); self.stats_table.setRowCount(0)
+        self.table.clearContents(); self.table.setRowCount(0)
 
     def _populate_stats_table(self):
-        """Count labels and populate the stats table."""
+        """Tally up labels and show counts."""
         from collections import Counter
-        counts = Counter(lbl for _, lbl in self.all_data)
-        self.stats_table.setRowCount(len(counts))
+        cnt = Counter(lbl for _, lbl in self.all_data)
+        self.stats_table.setRowCount(len(cnt))
 
-        for row, (lbl, cnt) in enumerate(counts.items()):
-            item_lbl = QTableWidgetItem(str(lbl))
-            item_cnt = QTableWidgetItem(str(cnt))
+        for row, (label, count) in enumerate(cnt.items()):
+            item_label = QTableWidgetItem(str(label))
+            item_count = QTableWidgetItem(str(count))
 
-            # Center text
-            for item in (item_lbl, item_cnt):
-                item.setTextAlignment(Qt.AlignCenter)
-                item.setForeground(QBrush(QColor("#FFFFFF")))
-                item.setBackground(QBrush(QColor("#2E2E2E")))
-                font = QFont("Magistral Light", 10)
-                font.setBold(True)
-                item.setFont(font)
+            # Centre text nicely
+            item_label.setTextAlignment(Qt.AlignCenter)
+            item_count.setTextAlignment(Qt.AlignCenter)
 
-            self.stats_table.setItem(row, 0, item_lbl)
-            self.stats_table.setItem(row, 1, item_cnt)
+            # Bright-white text
+            brush = QBrush(QColor("#FFFFFF"))
+            item_label.setForeground(brush)
+            item_count.setForeground(brush)
+
+            # Dark grey lil’ background
+            bg = QBrush(QColor("#2E2E2E"))
+            item_label.setBackground(bg)
+            item_count.setBackground(bg)
+
+            # Give it some bold flair
+            cell_font = QFont("Magistral Light", 10)
+            cell_font.setBold(True)
+            item_label.setFont(cell_font)
+            item_count.setFont(cell_font)
+
+            self.stats_table.setItem(row, 0, item_label)
+            self.stats_table.setItem(row, 1, item_count)
 
     def refresh_table(self):
-        """Render thumbnails up to current max index, applying filter."""
-        selected = self.filter_combo.currentText()
-        if selected == "All":
-            data = self.all_data
-        else:
-            data = [(img, lbl) for img, lbl in self.all_data if str(lbl) == selected]
+        """Redraw the thumbnail grid based on the current filter and scroll position."""
+        sel = self.filter_combo.currentText()
+        data = self.all_data if sel == "All" else [
+            (img, lbl) for img, lbl in self.all_data if str(lbl) == sel
+        ]
 
-        disp = data[:self.max_idx]
+        disp_max = min(self.max_idx, len(data))
+        disp = data[:disp_max]
+
         if not disp:
             self.table.clearContents()
             self.table.setRowCount(0)
             return
 
-        width = self.table.viewport().width()
-        cols = max(1, width // (self.thumb_size.width() + 10))
+        w = self.table.viewport().width()
+        cols = max(1, w // (self.thumb_size.width() + 10))
         rows = math.ceil(len(disp) / cols)
         self.table.setColumnCount(cols)
         self.table.setRowCount(rows)
-        self.table.clearContents()
 
+        self.table.clearContents()
+        
         for idx, (img, lbl) in enumerate(disp):
             r, c = divmod(idx, cols)
             h, w = img.shape
-            qimg = QImage((img * 255).astype('uint8').data, w, h, w, QImage.Format_Grayscale8)
+            qimg = QImage((img * 255).astype('uint8').data, w, h, w,
+                          QImage.Format_Grayscale8)
             pix = QPixmap.fromImage(qimg).scaled(
                 self.thumb_size, Qt.KeepAspectRatio, Qt.SmoothTransformation
             )
-            label = QLabel()
-            label.setPixmap(pix)
-            label.setToolTip(str(lbl))
-            label.setAlignment(Qt.AlignCenter)
-
-            self.table.setCellWidget(r, c, label)
+            cell = QLabel()
+            cell.setPixmap(pix)
+            cell.setToolTip(str(lbl))
+            cell.setAlignment(Qt.AlignCenter)
+            self.table.setCellWidget(r, c, cell)
             self.table.setRowHeight(r, self.thumb_size.height() + 10)
 
-    def _on_scroll(self, value):
-        """Load next batch when scrollbar nears the bottom."""
+    def _on_scroll(self, val):
+        """When you scroll near the bottom, load the next batch of thumbnails."""
         sb = self.table.verticalScrollBar()
-        if value >= sb.maximum() - 10 and self.max_idx < len(self.all_data):
+        if val >= sb.maximum() - 10 and self.max_idx < len(self.all_data):
             self.max_idx = min(self.max_idx + self.page_size, len(self.all_data))
             self.refresh_table()
 
     def resizeEvent(self, event):
-        """Re-layout thumbnails when the widget resizes."""
+        """Tidy up the grid when the window resizes."""
         super().resizeEvent(event)
         self.refresh_table()
