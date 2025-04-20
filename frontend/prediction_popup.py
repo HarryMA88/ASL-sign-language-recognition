@@ -1,87 +1,99 @@
 import numpy as np
 import torch
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel
-from PyQt5.QtGui import QImage, QPixmap
+from PIL import Image
+
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QImage, QPixmap
+from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
-from PIL import Image
+
 from ml.transforms import get_test_transforms
 from frontend.utils.label_map import label_map
 
+
 class PredictionPopup(QDialog):
     """
-    A popup dialog to show the result of a single prediction.
-
-    It shows:
-      - the original image
-      - the predicted label
-      - a bar chart of output probabilities
+    Popup dialog showing:
+      - Original grayscale image
+      - Predicted class label
+      - Bar chart of output probabilities
     """
+
     def __init__(self, model, device, img_array, parent=None):
         super().__init__(parent)
-        # Remove the help button on Windows
-        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+
+        # Window setup
         self.setWindowTitle("Prediction Result")
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.resize(500, 600)
 
+        # Store references
         self.model = model
         self.device = device
         self.img_array = img_array
 
-        # Main vertical layout
+        # Layout container
         layout = QVBoxLayout(self)
 
-        # Label to show the input image
-        self.img_label = QLabel()
-        self.img_label.setAlignment(Qt.AlignCenter)
+        # Image display
+        self.img_label = QLabel(alignment=Qt.AlignCenter)
         layout.addWidget(self.img_label)
 
-        # Label to show the predicted class text
-        self.pred_label = QLabel("Prediction: N/A")
-        self.pred_label.setAlignment(Qt.AlignCenter)
+        # Prediction text
+        self.pred_label = QLabel("Prediction: N/A", alignment=Qt.AlignCenter)
         layout.addWidget(self.pred_label)
 
-        # Matplotlib canvas for probability bars
+        # Probability chart
         self.fig, self.ax = plt.subplots()
+        self._style_chart()
         self.canvas = FigureCanvas(self.fig)
         layout.addWidget(self.canvas)
 
-        # Run the model and update UI
+        # Run inference and update UI
         self.run_prediction()
+
+    def _style_chart(self):
+        """Apply grey background and white/orange styling to the chart."""
+        self.fig.patch.set_facecolor('#2E2E2E')
+        self.ax.set_facecolor('#2E2E2E')
+        self.ax.tick_params(colors='white')
+        self.ax.xaxis.label.set_color('white')
+        self.ax.yaxis.label.set_color('white')
+        # Set spine colours to white
+        for spine in self.ax.spines.values():
+            spine.set_color('white')
 
     def run_prediction(self):
         """
-        Display the image, run the model, then plot and show results.
+        Render the input image, perform model inference, and plot probabilities.
         """
-        # Show the scaled grayscale image
-        img = self.img_array
+        # Display the grayscale image
+        img = (self.img_array * 255).astype('uint8')
         h, w = img.shape
-        qimg = QImage((img * 255).astype("uint8").data, w, h, w, QImage.Format_Grayscale8)
-        pix = QPixmap.fromImage(qimg).scaled(
-            200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation
-        )
+        qimg = QImage(img.data, w, h, w, QImage.Format_Grayscale8)
+        pix = QPixmap.fromImage(qimg).scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.img_label.setPixmap(pix)
 
-        # Transform to tensor via PIL then torchvision pipeline
-        img_pil = Image.fromarray((img * 255).astype(np.uint8))
+        # Prepare tensor for model
+        pil_img = Image.fromarray(img)
         transform = get_test_transforms()
-        tensor = transform(np.array(img_pil)).unsqueeze(0).to(self.device)
+        tensor = transform(np.array(pil_img)).unsqueeze(0).to(self.device)
 
-        # Predict without tracking gradients
+        # Inference
         with torch.no_grad():
             out = self.model(tensor)
-            probs = torch.nn.functional.softmax(out, dim=1).squeeze().cpu().numpy()
+            probs = torch.softmax(out, dim=1).cpu().numpy().squeeze()
             idx = int(out.argmax(1).item())
 
-        # Clear and draw probability bar chart
+        # Plot probabilities
         self.ax.clear()
-        self.ax.bar(np.arange(len(probs)), probs)
-        self.ax.set_title("Output Probabilities")
-        self.ax.set_xlabel("Class")
-        self.ax.set_ylabel("Probability")
+        self.ax.bar(np.arange(len(probs)), probs, color='orange')
+        self.ax.set_title('Output Probabilities', color='white')
+        self.ax.set_xlabel('Class', color='white')
+        self.ax.set_ylabel('Probability', color='white')
         self.canvas.draw()
 
-        # Map index to label and display it
-        label = label_map.get(idx, f"{idx}")
+        # Update prediction text
+        label = label_map.get(idx, str(idx))
         self.pred_label.setText(f"Prediction: {label}")

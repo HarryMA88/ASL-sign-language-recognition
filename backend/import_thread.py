@@ -3,21 +3,28 @@ import numpy as np
 import pandas as pd
 from PyQt5.QtCore import QThread, pyqtSignal
 
-# This class is for a background thread to import the dataset so the gui doesnt freeze
 class ImportThread(QThread):
+    """
+    This class is for a background thread to import the dataset so the gui doesnt freeze
+    """
     # This is for displaying the progress and eta for importing the dataset
     progress_signal = pyqtSignal(int, str)
     # This is for displaying an indicator for when the dataset is finished importing
     finished_signal = pyqtSignal(np.ndarray, np.ndarray, tuple)
 
-    # This is the constructor and stores the file path of the dataset to be loaded
     def __init__(self, file_path):
+        """
+        This is the constructor and stores the file path of the dataset to be loaded
+        """
         super().__init__()
         self.file_path = file_path
         # This is a boolean for indicating that we are currently importing the dataset
         self._is_running = True
 
     def run(self):
+        """
+        This is where the thread main logic is in
+        """
         start = time.time()
 
         # This reads the csv file in chunks of 1000 which is better for larger files
@@ -52,6 +59,8 @@ class ImportThread(QThread):
             shape = arr_i[0].shape
             self.finished_signal.emit(arr_i, arr_l, shape)
 
-    # This method is to stop importing the data
     def stop(self):
+        """
+        This method is to stop importing the data
+        """
         self._is_running = False
